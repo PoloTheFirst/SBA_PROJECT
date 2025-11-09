@@ -494,9 +494,9 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
             <h3 class="text-2xl font-bold text-white mb-6 text-center">Explore TravelGO Orbit</h3>
             <div class="video-container mx-auto max-w-4xl">
                 <video controls class="w-full rounded-lg shadow-lg">
-                    <source src="assets/videos/TravelGO_Orbits_Promo_Video.mp4" type="video/mp4">
-                    <source src="assets/videos/TravelGO_Orbits_Promo_Video.webm" type="video/webm">
-                    <source src="assets/videos/TravelGO_Orbits_Promo_Video.ogv" type="video/ogg">
+                    <source src="assets/TravelGO_Orbits_Promo_Video.mp4" type="video/mp4">
+                    <source src="assets/TravelGO_Orbits_Promo_Video.webm" type="video/webm">
+                    <source src="assets/TravelGO_Orbits_Promo_Video.ogv" type="video/ogg">
                     Your browser does not support the video tag.
                 </video>
             </div>
