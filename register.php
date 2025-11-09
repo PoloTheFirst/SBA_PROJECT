@@ -288,8 +288,8 @@ $all_states = $pdo->query("SELECT s.*, c.name as country_name FROM states s JOIN
             <div class="flex items-center mt-6">
                 <input type="checkbox" id="terms" name="terms" required class="mr-2 w-4 h-4">
                 <label for="terms" class="text-white text-sm">
-                    I agree to the <a href="terms.php" class="text-blue-300 hover:underline" target="_blank">Terms of Service</a> and
-                    <a href="privacy.php" class="text-blue-300 hover:underline" target="_blank">Privacy Policy</a>
+                    I agree to the <a href="content_page/terms.php" class="text-blue-300 hover:underline" target="_blank">Terms of Service</a> and
+                    <a href="content_page/privacy.php" class="text-blue-300 hover:underline" target="_blank">Privacy Policy</a>
                 </label>
             </div>
 

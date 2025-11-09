@@ -285,9 +285,9 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     <div class="hidden md:block">
                         <div class="ml-10 flex items-center space-x-8">
                             <a href="index.php" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Flights</a>
-                            <a href="#" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Hotels</a>
-                            <a href="#" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Packages</a>
-                            <a href="#" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Deals</a>
+                            <a href="content_page/underdevelop.php" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Hotels</a>
+                            <a href="content_page/underdevelop.php" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Packages</a>
+                            <a href="content_page/underdevelop.php" class="text-white hover:text-yellow-400 px-3 py-2 rounded-md text-sm font-medium">Deals</a>
 
                             <?php if (isset($_SESSION['user_id'])): ?>
                                 <!-- User is logged in - Profile Dropdown -->
@@ -489,6 +489,19 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
             </div>
         </div>
 
+        <!-- Promo Video Section -->
+        <div class="mt-16">
+            <h3 class="text-2xl font-bold text-white mb-6 text-center">Explore TravelGO Orbit</h3>
+            <div class="video-container mx-auto max-w-4xl">
+                <video controls class="w-full rounded-lg shadow-lg">
+                    <source src="assets/videos/TravelGO_Orbits_Promo_Video.mp4" type="video/mp4">
+                    <source src="assets/videos/TravelGO_Orbits_Promo_Video.webm" type="video/webm">
+                    <source src="assets/videos/TravelGO_Orbits_Promo_Video.ogv" type="video/ogg">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+
         <!-- Features Section -->
         <div class="py-16 bg-gray-900">
             <div class="container mx-auto px-4">
@@ -593,16 +606,16 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                         </h3>
                         <p class="text-gray-300 mb-4">Making travel simple, affordable and unforgettable since 2023.</p>
                         <div class="flex space-x-4">
-                            <a href="#" class="text-gray-400 hover:text-white">
+                            <a href="content_page/underdevelop.php" class="text-gray-400 hover:text-white">
                                 <i data-feather="facebook"></i>
                             </a>
-                            <a href="#" class="text-gray-400 hover:text-white">
-                                <i data-feather="twitter"></i>
+                            <a href="content_page/underdevelop.php" class="text-gray-400 hover:text-white">
+                                <i data-feather="twitter"></i>      
                             </a>
-                            <a href="#" class="text-gray-400 hover:text-white">
+                            <a href="content_page/underdevelop.php" class="tex  t-gray-400 hover:text-white">
                                 <i data-feather="instagram"></i>
                             </a>
-                            <a href="#" class="text-gray-400 hover:text-white">
+                            <a href="content_page/underdevelop.php" class="text-gray-400 hover:text-white">
                                 <i data-feather="linkedin"></i>
                             </a>
                         </div>
@@ -612,11 +625,11 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     <div>
                         <h3 class="text-lg font-bold text-white mb-4">Company</h3>
                         <ul class="space-y-2">
-                            <li><a href="about.php" class="text-gray-400 hover:text-white">About Us</a></li>
-                            <li><a href="careers.php" class="text-gray-400 hover:text-white">Careers</a></li>
-                            <li><a href="blog.php" class="text-gray-400 hover:text-white">Blog</a></li>
-                            <li><a href="press.php" class="text-gray-400 hover:text-white">Press</a></li>
-                            <li><a href="contact.php" class="text-gray-400 hover:text-white">Contact Us</a></li>
+                            <li><a href="./content_page/about.php" class="text-gray-400 hover:text-white">About Us</a></li>
+                            <li><a href="./content_page/careers.php" class="text-gray-400 hover:text-white">Careers</a></li>
+                            <li><a href="./content_page/blog.php" class="text-gray-400 hover:text-white">Blog</a></li>
+                            <li><a href="./content_page/press.php" class="text-gray-400 hover:text-white">Press</a></li>
+                            <li><a href="./content_page/contact.php" class="text-gray-400 hover:text-white">Contact Us</a></li>
                         </ul>
                     </div>
 
@@ -637,14 +650,14 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     <div>
                         <h3 class="text-lg font-bold text-white mb-4">Download Our App</h3>
                         <div class="space-y-3">
-                            <a href="#" class="flex items-center bg-black text-white p-2 rounded-lg w-full max-w-xs">
+                            <a href="content_page/underdevelop.php" class="flex items-center bg-black text-white p-2 rounded-lg w-full max-w-xs">
                                 <i data-feather="download" class="mr-2"></i>
                                 <div>
                                     <div class="text-xs">Download on the</div>
                                     <div class="font-bold">App Store</div>
                                 </div>
                             </a>
-                            <a href="#" class="flex items-center bg-black text-white p-2 rounded-lg w-full max-w-xs">
+                            <a href="content_page/underdevelop.php" class="flex items-center bg-black text-white p-2 rounded-lg w-full max-w-xs">
                                 <i data-feather="download" class="mr-2"></i>
                                 <div>
                                     <div class="text-xs">Get it on</div>

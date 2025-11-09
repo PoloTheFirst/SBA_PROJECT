@@ -1197,14 +1197,14 @@ $seat_map = generateSeatMap();
                 <!-- Navigation Buttons -->
                 <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
                     <?php if ($step > 1): ?>
-                        <?php if ($step < 6): ?>
+                        <?php if ($step < 5): ?>
                             <button type="submit" name="action" value="previous_step"
                                 class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
                                 <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
                                 Previous
                             </button>
                         <?php else: ?>
-                            <a href="payment.php?step=5" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                            <a href="payment.php?step=<?= $step - 1 ?>" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
                                 <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
                                 Previous
                             </a>

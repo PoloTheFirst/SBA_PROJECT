@@ -108,7 +108,7 @@ if (session_status() == PHP_SESSION_NONE) {
                 <a href="messages.php">Messages</a>
                 <a href="payments.php">Payments</a>
                 <a href="settings.php">Settings</a>
-                <a href="help.php">Help Center</a>
+                <a href="content_page/help.php">Help Center</a>
                 <a href="dashboard.php">Dashboard</a>
                 <a href="2fa_setup.php">2FA Setup</a>
             </div>
@@ -131,16 +131,16 @@ if (session_status() == PHP_SESSION_NONE) {
 
     <footer class="footer">
         <div class="footer-links">
-            <a href="about.php">About Us</a>
-            <a href="careers.php">Careers</a>
-            <a href="blog.php">Blog</a>
-            <a href="press.php">Press</a>
-            <a href="contact.php">Contact Us</a>
-            <a href="safety.php">Safety Information</a>
-            <a href="cancellations.php">Cancellation Options</a>
-            <a href="report.php">Report Issue</a>
-            <a href="terms.php">Terms & Conditions</a>
-            <a href="privacy.php">Privacy Policy</a>
+            <a href="content_page/about.php">About Us</a>
+            <a href="content_page/careers.php">Careers</a>
+            <a href="content_page/blog.php">Blog</a>
+            <a href="content_page/press.php">Press</a>
+            <a href="content_page/contact.php">Contact Us</a>
+            <a href="content_page/safety.php">Safety Information</a>
+            <a href="content_page/cancellation.php">Cancellation Options</a>
+            <a href="content_page/report.php">Report Issue</a>
+            <a href="content_page/terms.php">Terms & Conditions</a>
+            <a href="content_page/privacy.php">Privacy Policy</a>
         </div>
         <p style="color: #6b7280; margin: 0;">&copy; 2023 TravelGO Orbit. All rights reserved.</p>
     </footer>

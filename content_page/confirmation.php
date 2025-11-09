@@ -2,12 +2,12 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-require 'connection.php';
+require '../connection.php';
 
 $booking_ref = $_SESSION['booking_reference'] ?? null;
 
 if (!$booking_ref) {
-    header("Location: index.php");
+    header("Location: ../index.php");
     exit();
 }
 
@@ -37,8 +37,25 @@ unset($_SESSION['booking_reference']);
         }
     </style>
 </head>
-<body class="min-h-screen bg-gray-900">
-    <div class="container mx-auto px-4 py-8 max-w-2xl">
+<body class="min-h-screen bg-gray-900 flex flex-col">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 text-white py-4">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="../index.php" class="flex items-center space-x-2">
+                    <i data-feather="navigation" class="text-yellow-400"></i>
+                    <span class="text-xl font-bold">TravelGO Orbit</span>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="../index.php" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-2xl flex-grow">
         <div class="card-dark rounded-lg p-8 text-center">
             <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i data-feather="check" class="text-white w-10 h-10"></i>
@@ -65,10 +82,10 @@ unset($_SESSION['booking_reference']);
             </div>
             
             <div class="space-y-4">
-                <a href="dashboard.php" class="block bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
+                <a href="../dashboard.php" class="block bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
                     View My Bookings
                 </a>
-                <a href="index.php" class="block bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                <a href="../index.php" class="block bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
                     Book Another Flight
                 </a>
             </div>
@@ -81,6 +98,13 @@ unset($_SESSION['booking_reference']);
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-400">&copy; 2023 TravelGO Orbit. All rights reserved.</p>
+        </div>
+    </footer>
 
     <script>
         feather.replace();

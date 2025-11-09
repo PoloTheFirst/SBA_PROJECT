@@ -25,18 +25,18 @@ if (session_status() == PHP_SESSION_NONE) {
         }
     </style>
 </head>
-<body class="min-h-screen bg-gray-900">
+<body class="min-h-screen bg-gray-900 flex flex-col">
     <!-- Navigation -->
     <nav class="bg-gray-800 text-white py-4">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center space-x-2">
-                <a href="index.php" class="flex items-center space-x-2">
+                <a href="../index.php" class="flex items-center space-x-2">
                     <i data-feather="navigation" class="text-yellow-400"></i>
                     <span class="text-xl font-bold">TravelGO Orbit</span>
                 </a>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="index.php" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                <a href="../index.php" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
                     Back to Home
                 </a>
                 <a href="privacy.php" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors">
@@ -46,7 +46,7 @@ if (session_status() == PHP_SESSION_NONE) {
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="container mx-auto px-4 py-8 max-w-4xl flex-grow">
         <div class="content-card rounded-lg p-8">
             <h1 class="text-3xl font-bold text-white mb-6">Terms of Service</h1>
             <p class="text-gray-300 mb-6">Last updated: <?= date('F j, Y') ?></p>
@@ -125,6 +125,13 @@ if (session_status() == PHP_SESSION_NONE) {
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-400">&copy; 2023 TravelGO Orbit. All rights reserved.</p>
+        </div>
+    </footer>
 
     <script>
         feather.replace();
