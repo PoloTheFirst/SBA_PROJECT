@@ -101,7 +101,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['payment_data'][$key] = $value;
         }
 
-        // Move to next step
+        // Check if this is the final step (5)
+        if ($step == 5) {
+            // Process the payment and move to receipt
+            if (processPayment()) {
+                header("Location: payment.php?step=6");
+                exit();
+            } else {
+                // If payment processing fails, stay on step 5
+                header("Location: payment.php?step=5&error=payment_failed");
+                exit();
+            }
+        }
+
+        // For other steps, move to next step
         $step = min($step + 1, 6);
         header("Location: payment.php?step=$step");
         exit();
@@ -112,11 +125,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'process_payment') {
         // Process the final payment
         if (processPayment()) {
-            $step = 6;
             header("Location: payment.php?step=6");
             exit();
         } else {
-            header("Location: payment.php?step=5");
+            header("Location: payment.php?step=5&error=payment_failed");
             exit();
         }
     }
@@ -1479,13 +1491,43 @@ $seat_map = generateSeatMap();
         document.getElementById('final-payment-form')?.addEventListener('submit', function(e) {
             // Just show loading state, don't prevent default
             const button = document.getElementById('complete-booking');
+            const spinner = document.getElementById('loading-spinner');
+            const buttonText = document.getElementById('button-text');
+
             if (button) {
-                document.getElementById('loading-spinner').style.display = 'block';
-                document.getElementById('button-text').textContent = 'Processing...';
+                spinner.style.display = 'block';
+                buttonText.textContent = 'Processing...';
                 button.disabled = true;
             }
-            console.log('Final payment form submitting...');
-            // Let form submit normally - it will redirect to receipt.php
+
+            const formData = new FormData(this);
+            formData.append('action', 'save_step');
+
+            fetch('payment.php?step=5', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text().then(html => {
+                        if (html.includes('error=payment_failed')) {
+                            alert('Payment processing failed. Please try again.');
+                        }
+                        location.reload();
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Payment error:', error);
+                alert('Payment failed. Please try again.');
+                if (button) {
+                    spinner.style.display = 'none';
+                    buttonText.textContent = 'Complete Booking';
+                    button.disabled = false;
+                }
+            });
         });
 
         // Helper validation functions
@@ -1560,7 +1602,7 @@ $seat_map = generateSeatMap();
 
         // Enhanced complete booking handler
         document.getElementById('final-payment-form')?.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default first
+            e.preventDefault();
 
             const button = document.getElementById('complete-booking');
             const spinner = document.getElementById('loading-spinner');
@@ -1572,29 +1614,34 @@ $seat_map = generateSeatMap();
                 button.disabled = true;
             }
 
-            console.log('Final payment form submitting...');
+            const formData = new FormData(this);
+            formData.append('action', 'save_step');
 
-            // Use fetch API to submit the form and handle redirect
             fetch('payment.php?step=5', {
-                    method: 'POST',
-                    body: new FormData(this)
-                })
-                .then(response => {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                    } else {
-                        return response.text().then(html => {
-                            // If not redirected, there might be an error
-                            console.error('Payment failed - no redirect');
-                            location.reload(); // Reload to show error
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Payment error:', error);
-                    alert('Payment failed. Please try again.');
-                    location.reload();
-                });
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text().then(html => {
+                        if (html.includes('error=payment_failed')) {
+                            alert('Payment processing failed. Please try again.');
+                        }
+                        location.reload();
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Payment error:', error);
+                alert('Payment failed. Please try again.');
+                if (button) {
+                    spinner.style.display = 'none';
+                    buttonText.textContent = 'Complete Booking';
+                    button.disabled = false;
+                }
+            });
         });
     </script>
 </body>
