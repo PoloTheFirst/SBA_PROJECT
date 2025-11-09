@@ -348,15 +348,19 @@ $wishlistStmt = $pdo->prepare("SELECT * FROM user_wishlist WHERE user_id = ? ORD
 $wishlistStmt->execute([$_SESSION['user_id']]);
 $wishlist = $wishlistStmt->fetchAll();
 
-// Get user bookings
+// Get user bookings with enhanced data
 $bookingsStmt = $pdo->prepare("
     SELECT b.*, 
-           COALESCE(rtf.flight_number, 'N/A') as flight_number,
-           COALESCE(rtf.airline_name, 'Unknown Airline') as airline_name,
-           COALESCE(rtf.origin, 'Unknown') as origin,
-           COALESCE(rtf.destination, 'Unknown') as destination
+           t.transaction_id,
+           t.status as payment_status,
+           JSON_EXTRACT(b.flight_details, '$.flight_data.airline_name') as airline_name,
+           JSON_EXTRACT(b.flight_details, '$.flight_data.flight_number') as flight_number,
+           JSON_EXTRACT(b.flight_details, '$.flight_data.origin') as origin,
+           JSON_EXTRACT(b.flight_details, '$.flight_data.destination') as destination,
+           JSON_EXTRACT(b.flight_details, '$.selected_seats') as selected_seats,
+           b.created_at as booking_date
     FROM bookings b 
-    LEFT JOIN round_trip_flights rtf ON b.flight_id = rtf.id 
+    LEFT JOIN transactions t ON b.id = t.booking_id 
     WHERE b.user_id = ? 
     ORDER BY b.created_at DESC 
     LIMIT 10
@@ -364,6 +368,30 @@ $bookingsStmt = $pdo->prepare("
 $bookingsStmt->execute([$_SESSION['user_id']]);
 $bookings = $bookingsStmt->fetchAll();
 
+// Process JSON fields for display
+foreach ($bookings as &$booking) {
+    // Extract JSON values
+    $booking['airline_name'] = trim($booking['airline_name'] ?? '', '"');
+    $booking['flight_number'] = trim($booking['flight_number'] ?? '', '"');
+    $booking['origin'] = trim($booking['origin'] ?? '', '"');
+    $booking['destination'] = trim($booking['destination'] ?? '', '"');
+    
+    // Handle selected seats
+    if ($booking['selected_seats']) {
+        $seats = json_decode($booking['selected_seats'], true);
+        if (is_array($seats)) {
+            $booking['selected_seats_display'] = implode(', ', $seats);
+        } else {
+            $booking['selected_seats_display'] = 'Not assigned';
+        }
+    } else {
+        $booking['selected_seats_display'] = 'Not assigned';
+    }
+    
+    // Format dates
+    $booking['formatted_date'] = date('M j, Y', strtotime($booking['booking_date']));
+}
+unset($booking); // Break the reference
 // Get notifications
 $notificationsStmt = $pdo->prepare("
     SELECT * FROM notifications 

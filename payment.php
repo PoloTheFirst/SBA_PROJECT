@@ -148,7 +148,7 @@ function processPayment()
         $user_id = $_SESSION['user_id'] ?? null;
 
         // Prepare flight details with seat information
-        $flight_details = json_encode([
+        $flight_details_json = json_encode([
             'flight_id' => $_SESSION['payment_data']['flight_id'],
             'flight_type' => $_SESSION['payment_data']['flight_type'],
             'flight_data' => $_SESSION['payment_data']['flight_details'] ?? [],
@@ -161,8 +161,8 @@ function processPayment()
             'return_duration' => $_SESSION['payment_data']['flight_details']['return_duration'] ?? ''
         ], JSON_UNESCAPED_UNICODE);
 
-        $passenger_info = json_encode($_SESSION['payment_data']['passenger_info'] ?? [], JSON_UNESCAPED_UNICODE);
-        $billing_address = json_encode($_SESSION['payment_data']['billing_address'] ?? [], JSON_UNESCAPED_UNICODE);
+        $passenger_info_json = json_encode($_SESSION['payment_data']['passenger_info'] ?? [], JSON_UNESCAPED_UNICODE);
+        $billing_address_json = json_encode($_SESSION['payment_data']['billing_address'] ?? [], JSON_UNESCAPED_UNICODE);
 
         // Calculate final total including seat charges
         $final_total = ($_SESSION['payment_data']['total_amount'] ?? 0) + ($_SESSION['payment_data']['seat_charges'] ?? 0);
@@ -177,9 +177,9 @@ function processPayment()
             $booking_ref,
             $_SESSION['payment_data']['flight_type'],
             $_SESSION['payment_data']['flight_id'],
-            $flight_details,
-            $passenger_info,
-            $billing_address,
+            $flight_details_json,
+            $passenger_info_json,
+            $billing_address_json,
             $_SESSION['payment_data']['payment_method'],
             $final_total
         ]);
@@ -232,6 +232,21 @@ function processPayment()
         $_SESSION['transaction_id'] = $transaction_id;
         $_SESSION['final_total'] = $final_total;
 
+        // Store complete booking data for receipt
+        $_SESSION['booking_data'] = [
+            'booking_reference' => $booking_ref,
+            'booking_id' => $booking_id,
+            'transaction_id' => $transaction_id,
+            'total_amount' => $final_total,
+            'flight_details' => $_SESSION['payment_data']['flight_details'] ?? [],
+            'passenger_info' => $_SESSION['payment_data']['passenger_info'] ?? [],
+            'selected_seats' => $_SESSION['payment_data']['selected_seats'] ?? [],
+            'booking_date' => date('Y-m-d H:i:s'),
+            'base_amount' => $_SESSION['payment_data']['base_amount'] ?? 0,
+            'tax_amount' => $_SESSION['payment_data']['tax_amount'] ?? 0,
+            'seat_charges' => $_SESSION['payment_data']['seat_charges'] ?? 0
+        ];
+
         error_log("Payment processed successfully, ready for receipt step");
 
         return true;
@@ -245,20 +260,12 @@ function processPayment()
 }
 
 function generateBookingSummary() {
-    if (!isset($_SESSION['booking_reference'])) {
+    // Use session data instead of database query for immediate access
+    if (!isset($_SESSION['booking_data'])) {
         return null;
     }
 
-    return [
-        'booking_reference' => $_SESSION['booking_reference'],
-        'booking_id' => $_SESSION['booking_id'],
-        'transaction_id' => $_SESSION['transaction_id'],
-        'total_amount' => $_SESSION['final_total'],
-        'flight_details' => $_SESSION['payment_data']['flight_details'] ?? [],
-        'passenger_info' => $_SESSION['payment_data']['passenger_info'] ?? [],
-        'selected_seats' => $_SESSION['payment_data']['selected_seats'] ?? [],
-        'booking_date' => date('Y-m-d H:i:s')
-    ];
+    return $_SESSION['booking_data'];
 }
 
 function displayIntegratedReceipt() {
@@ -287,22 +294,26 @@ function displayIntegratedReceipt() {
             
             <div class="bg-gray-50 p-4 rounded">
                 <h3 class="font-semibold mb-2">Flight Information</h3>
-                <p><strong>Airline:</strong> <?= htmlspecialchars($flight['airline_name']) ?></p>
-                <p><strong>Flight:</strong> <?= htmlspecialchars($flight['flight_number']) ?></p>
-                <p><strong>Route:</strong> <?= htmlspecialchars($flight['origin']) ?> → <?= htmlspecialchars($flight['destination']) ?></p>
+                <p><strong>Airline:</strong> <?= htmlspecialchars($flight['airline_name'] ?? 'Unknown') ?></p>
+                <p><strong>Flight:</strong> <?= htmlspecialchars($flight['flight_number'] ?? 'N/A') ?></p>
+                <p><strong>Route:</strong> <?= htmlspecialchars($flight['origin'] ?? 'Unknown') ?> → <?= htmlspecialchars($flight['destination'] ?? 'Unknown') ?></p>
             </div>
         </div>
 
         <!-- Passenger Information -->
         <div class="bg-gray-50 p-4 rounded mb-6">
             <h3 class="font-semibold mb-2">Passenger Information</h3>
-            <?php foreach ($passengers as $index => $passenger): ?>
-                <div class="mb-2">
-                    <strong>Passenger <?= $index === 'passenger_1' ? '1 (Primary)' : substr($index, -1) ?>:</strong>
-                    <?= htmlspecialchars($passenger['first_name']) ?> <?= htmlspecialchars($passenger['last_name']) ?>
-                    (<?= ucfirst($passenger['gender']) ?>)
-                </div>
-            <?php endforeach; ?>
+            <?php if (is_array($passengers)): ?>
+                <?php foreach ($passengers as $index => $passenger): ?>
+                    <div class="mb-2">
+                        <strong>Passenger <?= $index === 'passenger_1' ? '1 (Primary)' : substr($index, -1) ?>:</strong>
+                        <?= htmlspecialchars($passenger['first_name'] ?? '') ?> <?= htmlspecialchars($passenger['last_name'] ?? '') ?>
+                        (<?= ucfirst($passenger['gender'] ?? '') ?>)
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p>No passenger information available.</p>
+            <?php endif; ?>
         </div>
 
         <!-- Selected Seats -->
@@ -319,18 +330,18 @@ function displayIntegratedReceipt() {
             <div class="space-y-2">
                 <div class="flex justify-between">
                     <span>Flight Cost:</span>
-                    <span>HKD $<?= number_format($_SESSION['payment_data']['base_amount'] ?? 0, 2) ?></span>
+                    <span>HKD $<?= number_format($bookingSummary['base_amount'] ?? 0, 2) ?></span>
                 </div>
-                <?php if (isset($_SESSION['payment_data']['tax_amount']) && $_SESSION['payment_data']['tax_amount'] > 0): ?>
+                <?php if (isset($bookingSummary['tax_amount']) && $bookingSummary['tax_amount'] > 0): ?>
                 <div class="flex justify-between">
                     <span>Taxes & Fees (3%):</span>
-                    <span>HKD $<?= number_format($_SESSION['payment_data']['tax_amount'] ?? 0, 2) ?></span>
+                    <span>HKD $<?= number_format($bookingSummary['tax_amount'] ?? 0, 2) ?></span>
                 </div>
                 <?php endif; ?>
-                <?php if (($_SESSION['payment_data']['seat_charges'] ?? 0) > 0): ?>
+                <?php if (($bookingSummary['seat_charges'] ?? 0) > 0): ?>
                 <div class="flex justify-between">
                     <span>Seat Selection Charges:</span>
-                    <span>HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?></span>
+                    <span>HKD $<?= number_format($bookingSummary['seat_charges'] ?? 0, 2) ?></span>
                 </div>
                 <?php endif; ?>
                 <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
@@ -364,23 +375,6 @@ function displayIntegratedReceipt() {
     return ob_get_clean();
 }
 
-function handleSixStepBooking() {
-    global $step;
-    
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'process_payment') {
-        if (processPayment()) {
-            $step = 6;
-            return true;
-        }
-    }
-    return false;
-}
-
-function generateBookingConfirmation() {
-    return generateBookingSummary();
-}
-
-// Generate seat map
 function generateSeatMap($rows = 10, $cols = 6)
 {
     $seats = [];
