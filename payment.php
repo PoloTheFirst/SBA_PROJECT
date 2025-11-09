@@ -281,13 +281,41 @@ function generateBookingSummary() {
 }
 
 function displayIntegratedReceipt() {
+    // Try to get booking data from session first
     $bookingSummary = generateBookingSummary();
+    
+    // If not available, try to reconstruct from payment_data session
+    if (!$bookingSummary && isset($_SESSION['payment_data'])) {
+        $paymentData = $_SESSION['payment_data'];
+        $bookingSummary = [
+            'booking_reference' => $_SESSION['booking_reference'] ?? 'N/A',
+            'transaction_id' => $_SESSION['transaction_id'] ?? 'N/A',
+            'booking_date' => $_SESSION['booking_data']['booking_date'] ?? date('Y-m-d H:i:s'),
+            'total_amount' => $_SESSION['final_total'] ?? (($paymentData['total_amount'] ?? 0) + ($paymentData['seat_charges'] ?? 0)),
+            'flight_details' => $paymentData['flight_details'] ?? [],
+            'passenger_info' => $paymentData['passenger_info'] ?? [],
+            'selected_seats' => $paymentData['selected_seats'] ?? [],
+            'base_amount' => $paymentData['base_amount'] ?? 0,
+            'tax_amount' => $paymentData['tax_amount'] ?? 0,
+            'seat_charges' => $paymentData['seat_charges'] ?? 0
+        ];
+    }
+    
     if (!$bookingSummary) {
-        return '<div class="bg-red-900 text-white p-4 rounded">Receipt data not available.</div>';
+        return '<div class="bg-red-900 text-white p-4 rounded">Receipt data not available. Please try again.</div>';
     }
 
     $flight = $bookingSummary['flight_details'];
     $passengers = $bookingSummary['passenger_info'];
+    
+    // Handle selected seats if it's a string
+    $selectedSeats = $bookingSummary['selected_seats'] ?? [];
+    if (is_string($selectedSeats)) {
+        $selectedSeats = json_decode($selectedSeats, true) ?? [];
+    }
+    if (!is_array($selectedSeats)) {
+        $selectedSeats = [];
+    }
     
     ob_start(); ?>
     <div class="receipt-container bg-white text-gray-900 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
@@ -299,9 +327,9 @@ function displayIntegratedReceipt() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div class="bg-gray-50 p-4 rounded">
                 <h3 class="font-semibold mb-2">Booking Details</h3>
-                <p><strong>Reference:</strong> <?= $bookingSummary['booking_reference'] ?></p>
-                <p><strong>Transaction ID:</strong> <?= $bookingSummary['transaction_id'] ?></p>
-                <p><strong>Booking Date:</strong> <?= date('F j, Y g:i A', strtotime($bookingSummary['booking_date'])) ?></p>
+                <p><strong>Reference:</strong> <?= htmlspecialchars($bookingSummary['booking_reference'] ?? 'N/A') ?></p>
+                <p><strong>Transaction ID:</strong> <?= htmlspecialchars($bookingSummary['transaction_id'] ?? 'N/A') ?></p>
+                <p><strong>Booking Date:</strong> <?= date('F j, Y g:i A', strtotime($bookingSummary['booking_date'] ?? 'now')) ?></p>
             </div>
             
             <div class="bg-gray-50 p-4 rounded">
@@ -309,18 +337,32 @@ function displayIntegratedReceipt() {
                 <p><strong>Airline:</strong> <?= htmlspecialchars($flight['airline_name'] ?? 'Unknown') ?></p>
                 <p><strong>Flight:</strong> <?= htmlspecialchars($flight['flight_number'] ?? 'N/A') ?></p>
                 <p><strong>Route:</strong> <?= htmlspecialchars($flight['origin'] ?? 'Unknown') ?> → <?= htmlspecialchars($flight['destination'] ?? 'Unknown') ?></p>
+                <?php if (isset($flight['departure_date'])): ?>
+                <p><strong>Travel Dates:</strong> <?= date('M j, Y', strtotime($flight['departure_date'])) ?> - <?= date('M j, Y', strtotime($flight['return_date'] ?? $flight['departure_date'])) ?></p>
+                <?php endif; ?>
             </div>
         </div>
 
         <!-- Passenger Information -->
         <div class="bg-gray-50 p-4 rounded mb-6">
             <h3 class="font-semibold mb-2">Passenger Information</h3>
-            <?php if (is_array($passengers)): ?>
+            <?php if (is_array($passengers) && !empty($passengers)): ?>
                 <?php foreach ($passengers as $index => $passenger): ?>
-                    <div class="mb-2">
-                        <strong>Passenger <?= $index === 'passenger_1' ? '1 (Primary)' : substr($index, -1) ?>:</strong>
-                        <?= htmlspecialchars($passenger['first_name'] ?? '') ?> <?= htmlspecialchars($passenger['last_name'] ?? '') ?>
-                        (<?= ucfirst($passenger['gender'] ?? '') ?>)
+                    <div class="mb-4 pb-4 border-b border-gray-300 last:border-b-0 last:mb-0 last:pb-0">
+                        <h4 class="font-semibold text-gray-800 mb-2">Passenger <?= $index === 'passenger_1' ? '1 (Primary)' : substr($index, -1) ?></h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div><span class="text-gray-600">Name:</span> <span class="text-gray-900"><?= htmlspecialchars($passenger['first_name'] ?? '') ?> <?= htmlspecialchars($passenger['last_name'] ?? '') ?></span></div>
+                            <?php if (isset($passenger['email'])): ?>
+                                <div><span class="text-gray-600">Email:</span> <span class="text-gray-900"><?= htmlspecialchars($passenger['email']) ?></span></div>
+                            <?php endif; ?>
+                            <?php if (isset($passenger['phone'])): ?>
+                                <div><span class="text-gray-600">Phone:</span> <span class="text-gray-900"><?= htmlspecialchars($passenger['phone']) ?></span></div>
+                            <?php endif; ?>
+                            <div><span class="text-gray-600">Gender:</span> <span class="text-gray-900"><?= ucfirst($passenger['gender'] ?? '') ?></span></div>
+                            <?php if (isset($passenger['dob'])): ?>
+                                <div><span class="text-gray-600">Date of Birth:</span> <span class="text-gray-900"><?= date('M j, Y', strtotime($passenger['dob'])) ?></span></div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -329,10 +371,32 @@ function displayIntegratedReceipt() {
         </div>
 
         <!-- Selected Seats -->
-        <?php if (!empty($bookingSummary['selected_seats'])): ?>
+        <?php if (!empty($selectedSeats)): ?>
         <div class="bg-gray-50 p-4 rounded mb-6">
             <h3 class="font-semibold mb-2">Selected Seats</h3>
-            <p><?= is_array($bookingSummary['selected_seats']) ? implode(', ', $bookingSummary['selected_seats']) : $bookingSummary['selected_seats'] ?></p>
+            <p class="text-gray-900"><?= is_array($selectedSeats) ? implode(', ', $selectedSeats) : htmlspecialchars($selectedSeats) ?></p>
+        </div>
+        <?php endif; ?>
+
+        <!-- Billing Address -->
+        <?php if (isset($_SESSION['payment_data']['billing_address'])): ?>
+        <div class="bg-gray-50 p-4 rounded mb-6">
+            <h3 class="font-semibold mb-2">Billing Address</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div><span class="text-gray-600">Street:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street']) ?></span></div>
+                <div><span class="text-gray-600">City:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city']) ?></span></div>
+                <div><span class="text-gray-600">State/Province:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state']) ?></span></div>
+                <div><span class="text-gray-600">ZIP/Postal Code:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip']) ?></span></div>
+                <div class="md:col-span-2"><span class="text-gray-600">Country:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country']) ?></span></div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Payment Method -->
+        <?php if (isset($_SESSION['payment_data']['payment_method'])): ?>
+        <div class="bg-gray-50 p-4 rounded mb-6">
+            <h3 class="font-semibold mb-2">Payment Method</h3>
+            <p class="text-gray-900"><?= ucfirst(str_replace('_', ' ', $_SESSION['payment_data']['payment_method'])) ?></p>
         </div>
         <?php endif; ?>
 
@@ -358,7 +422,7 @@ function displayIntegratedReceipt() {
                 <?php endif; ?>
                 <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
                     <span>Total Amount:</span>
-                    <span class="text-green-600">HKD $<?= number_format($bookingSummary['total_amount'], 2) ?></span>
+                    <span class="text-green-600">HKD $<?= number_format($bookingSummary['total_amount'] ?? 0, 2) ?></span>
                 </div>
             </div>
         </div>
@@ -1157,7 +1221,7 @@ $seat_map = generateSeatMap();
                         </button>
                     <?php else: ?>
                         <!-- Separate form for final payment processing -->
-                        <form method="POST" id="final-payment-form">
+                        <form method="POST" id="final-payment-form" action="payment.php?step=5">
                             <input type="hidden" name="action" value="process_payment">
                             <button type="submit" id="complete-booking"
                                 class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded transition-colors">
@@ -1476,58 +1540,20 @@ $seat_map = generateSeatMap();
             }
         });
 
-        // Complete booking button handler for step 5
-        document.getElementById('complete-booking')?.addEventListener('click', function(e) {
-            // Show loading spinner but don't prevent default
-            document.getElementById('loading-spinner').style.display = 'block';
-            document.getElementById('button-text').textContent = 'Processing...';
-            this.disabled = true;
-
-            // The form will submit naturally
-            console.log('Complete booking clicked, form should submit...');
-        });
-
-        // Also handle the final payment form submission
+        // Complete booking form submission handler for step 5
         document.getElementById('final-payment-form')?.addEventListener('submit', function(e) {
-            // Just show loading state, don't prevent default
             const button = document.getElementById('complete-booking');
             const spinner = document.getElementById('loading-spinner');
             const buttonText = document.getElementById('button-text');
 
-            if (button) {
+            if (button && spinner && buttonText) {
                 spinner.style.display = 'block';
                 buttonText.textContent = 'Processing...';
                 button.disabled = true;
             }
 
-            const formData = new FormData(this);
-            formData.append('action', 'save_step');
-
-            fetch('payment.php?step=5', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
-                    return response.text().then(html => {
-                        if (html.includes('error=payment_failed')) {
-                            alert('Payment processing failed. Please try again.');
-                        }
-                        location.reload();
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Payment error:', error);
-                alert('Payment failed. Please try again.');
-                if (button) {
-                    spinner.style.display = 'none';
-                    buttonText.textContent = 'Complete Booking';
-                    button.disabled = false;
-                }
-            });
+            // Allow form to submit naturally - don't prevent default
+            console.log('Complete booking clicked, form submitting...');
         });
 
         // Helper validation functions
@@ -1600,49 +1626,6 @@ $seat_map = generateSeatMap();
             }
         });
 
-        // Enhanced complete booking handler
-        document.getElementById('final-payment-form')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const button = document.getElementById('complete-booking');
-            const spinner = document.getElementById('loading-spinner');
-            const buttonText = document.getElementById('button-text');
-
-            if (button) {
-                spinner.style.display = 'block';
-                buttonText.textContent = 'Processing...';
-                button.disabled = true;
-            }
-
-            const formData = new FormData(this);
-            formData.append('action', 'save_step');
-
-            fetch('payment.php?step=5', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
-                    return response.text().then(html => {
-                        if (html.includes('error=payment_failed')) {
-                            alert('Payment processing failed. Please try again.');
-                        }
-                        location.reload();
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Payment error:', error);
-                alert('Payment failed. Please try again.');
-                if (button) {
-                    spinner.style.display = 'none';
-                    buttonText.textContent = 'Complete Booking';
-                    button.disabled = false;
-                }
-            });
-        });
     </script>
 </body>
 
