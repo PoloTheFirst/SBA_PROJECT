@@ -624,12 +624,12 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     <div>
                         <h3 class="text-lg font-bold text-white mb-4">Support</h3>
                         <ul class="space-y-2">
-                            <li><a href="help.php" class="text-gray-400 hover:text-white">Help Center</a></li>
-                            <li><a href="safety.php" class="text-gray-400 hover:text-white">Safety Information</a></li>
-                            <li><a href="cancellation.php" class="text-gray-400 hover:text-white">Cancellation Options</a></li>
-                            <li><a href="report.php" class="text-gray-400 hover:text-white">Report Issue</a></li>
-                            <li><a href="terms.php" class="text-gray-400 hover:text-white">Terms of Service</a></li>
-                            <li><a href="privacy.php" class="text-gray-400 hover:text-white">Privacy Policy</a></li>
+                            <li><a href="./content_page/help.php" class="text-gray-400 hover:text-white">Help Center</a></li>
+                            <li><a href="./content_page/safety.php" class="text-gray-400 hover:text-white">Safety Information</a></li>
+                            <li><a href="./content_page/cancellation.php" class="text-gray-400 hover:text-white">Cancellation Options</a></li>
+                            <li><a href="./content_page/report.php" class="text-gray-400 hover:text-white">Report Issue</a></li>
+                            <li><a href="./content_page/terms.php" class="text-gray-400 hover:text-white">Terms of Service</a></li>
+                            <li><a href="./content_page/privacy.php" class="text-gray-400 hover:text-white">Privacy Policy</a></li>
                         </ul>
                     </div>
 
