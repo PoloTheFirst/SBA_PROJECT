@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 09, 2025 at 02:11 PM
+-- Generation Time: Nov 09, 2025 at 03:00 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,7 +45,10 @@ CREATE TABLE `bookings` (
   `total_amount` decimal(10,2) NOT NULL,
   `status` enum('pending','confirmed','cancelled') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `payment_status` enum('pending','completed','failed') DEFAULT 'pending',
+  `booking_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `traveler_details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`traveler_details`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -469,7 +472,10 @@ ALTER TABLE `bookings`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `idx_user_status` (`user_id`,`status`),
   ADD KEY `idx_booking_ref` (`booking_reference`),
-  ADD KEY `idx_user_bookings` (`user_id`,`created_at`);
+  ADD KEY `idx_user_bookings` (`user_id`,`created_at`),
+  ADD KEY `idx_booking_reference` (`booking_reference`),
+  ADD KEY `idx_payment_status` (`payment_status`),
+  ADD KEY `idx_booking_date` (`booking_date`);
 
 --
 -- Indexes for table `cities`
