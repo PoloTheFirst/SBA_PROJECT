@@ -29,7 +29,7 @@ function isValidLuhn($number)
 
         if ($i % 2 == $parity) {
             $digit *= 2;
-            if ($digit > 9) {
+            if ($digit > 9) { 
                 $digit -= 9;
             }
         }
