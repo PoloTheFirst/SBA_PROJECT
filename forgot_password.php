@@ -9,7 +9,8 @@ if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-$step = $_GET['step'] ?? 1; // 1: Email entry, 2: Security question, 3: Reset password
+// Initialize step from session or GET, default to 1
+$step = $_SESSION['reset_step'] ?? ($_GET['step'] ?? 1);
 $email = '';
 $security_question = '';
 $message = '';
@@ -55,10 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         if ($user) {
                             // For demo purposes, we'll use a random security question
-                            // In a real app, this would be user-defined
                             $random_question = array_rand($security_questions);
                             $security_question = $random_question;
                             $_SESSION['reset_email'] = $email;
+                            $_SESSION['reset_step'] = 2; // Store next step in session
                             $_SESSION['security_question'] = $security_question;
                             $_SESSION['expected_answer'] = $security_questions[$random_question];
                             $step = 2;
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['reset_email'] = $email;
                             $random_question = array_rand($security_questions);
                             $security_question = $random_question;
+                            $_SESSION['reset_step'] = 2; // Store next step in session
                             $_SESSION['security_question'] = $security_question;
                             $_SESSION['expected_answer'] = $security_questions[$random_question];
                             $step = 2;
@@ -88,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // For demo, we'll verify against our fake answers
                         $expected_answer = $_SESSION['expected_answer'] ?? '';
                         if (strtolower($answer) === strtolower($expected_answer)) {
+                            $_SESSION['reset_step'] = 3; // Store next step in session
                             $step = 3;
                         } else {
                             $message = "Incorrect answer. Please try again.";
@@ -130,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         // Clear reset session
                         unset($_SESSION['reset_email']);
+                        unset($_SESSION['reset_step']);
                         unset($_SESSION['security_question']);
                         unset($_SESSION['expected_answer']);
                         
@@ -153,6 +157,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get data from session if available
 $email = $_SESSION['reset_email'] ?? $email;
 $security_question = $_SESSION['security_question'] ?? $security_question;
+
+// Ensure step is stored in session for continuity
+if (!isset($_SESSION['reset_step'])) {
+    $_SESSION['reset_step'] = $step;
+} else {
+    $step = $_SESSION['reset_step'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -267,6 +278,9 @@ $security_question = $_SESSION['security_question'] ?? $security_question;
                             class="w-full pl-10 pr-4 py-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800 placeholder-gray-500"
                             placeholder="Enter your answer">
                     </div>
+                    <p class="text-gray-400 text-xs mt-2">
+                        <strong>Demo hint:</strong> Use "<?= $_SESSION['expected_answer'] ?? 'the correct answer' ?>" for this question
+                    </p>
                 </div>
 
                 <button type="submit"
@@ -327,17 +341,8 @@ $security_question = $_SESSION['security_question'] ?? $security_question;
                 <div>
                     <h4 class="font-semibold text-yellow-300 text-sm">Demo Notice</h4>
                     <p class="text-yellow-200 text-xs mt-1">
-                        <strong>Demo Credentials:</strong> For security questions, use these answers:<br>
-                        • First pet: <strong>Buddy</strong><br>
-                        • Birth city: <strong>Springfield</strong><br>
-                        • Mother's maiden name: <strong>Johnson</strong><br>
-                        • First school: <strong>Maple Elementary</strong><br>
-                        • Favorite book: <strong>The Great Gatsby</strong><br>
-                        • Childhood nickname: <strong>Ace</strong><br>
-                        • Childhood friend: <strong>Mike</strong><br>
-                        • Childhood street: <strong>Oak Street</strong><br>
-                        • Dream job: <strong>Astronaut</strong><br>
-                        • Teacher's last name: <strong>Davis</strong>
+                        <strong>Demo Credentials:</strong> For security questions, use the answers shown above.<br>
+                        In a real application, these would be user-defined and securely stored.
                     </p>
                 </div>
             </div>
