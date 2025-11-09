@@ -15,13 +15,18 @@ $security_question = '';
 $message = '';
 $message_type = '';
 
-// Common security questions (in real app, these would be user-defined)
+// Common security questions with fake answers for demo
 $security_questions = [
-    "What was your first pet's name?",
-    "What city were you born in?",
-    "What is your mother's maiden name?",
-    "What was the name of your first school?",
-    "What is your favorite book?",
+    "What was your first pet's name?" => "Buddy",
+    "What city were you born in?" => "Springfield",
+    "What is your mother's maiden name?" => "Johnson",
+    "What was the name of your first school?" => "Maple Elementary",
+    "What is your favorite book?" => "The Great Gatsby",
+    "What was your childhood nickname?" => "Ace",
+    "What is the name of your favorite childhood friend?" => "Mike",
+    "What street did you grow up on?" => "Oak Street",
+    "What was your dream job as a child?" => "Astronaut",
+    "What is the last name of your favorite teacher?" => "Davis"
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -51,9 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($user) {
                             // For demo purposes, we'll use a random security question
                             // In a real app, this would be user-defined
-                            $security_question = $security_questions[array_rand($security_questions)];
+                            $random_question = array_rand($security_questions);
+                            $security_question = $random_question;
                             $_SESSION['reset_email'] = $email;
                             $_SESSION['security_question'] = $security_question;
+                            $_SESSION['expected_answer'] = $security_questions[$random_question];
                             $step = 2;
                         } else {
                             // Don't reveal if email exists for security
@@ -61,8 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $message_type = 'info';
                             // Still move to next step for security
                             $_SESSION['reset_email'] = $email;
-                            $security_question = $security_questions[array_rand($security_questions)];
+                            $random_question = array_rand($security_questions);
+                            $security_question = $random_question;
                             $_SESSION['security_question'] = $security_question;
+                            $_SESSION['expected_answer'] = $security_questions[$random_question];
                             $step = 2;
                         }
                     }
@@ -70,15 +79,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 case 2:
                     // Step 2: Verify security question
-                    $answer = $_POST['security_answer'] ?? '';
+                    $answer = trim($_POST['security_answer'] ?? '');
                     
                     if (empty($answer)) {
                         $message = "Please answer the security question.";
                         $message_type = 'error';
                     } else {
-                        // In a real app, we'd verify against stored answer
-                        // For demo, we'll accept any non-empty answer
-                        $step = 3;
+                        // For demo, we'll verify against our fake answers
+                        $expected_answer = $_SESSION['expected_answer'] ?? '';
+                        if (strtolower($answer) === strtolower($expected_answer)) {
+                            $step = 3;
+                        } else {
+                            $message = "Incorrect answer. Please try again.";
+                            $message_type = 'error';
+                        }
                     }
                     break;
 
@@ -117,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Clear reset session
                         unset($_SESSION['reset_email']);
                         unset($_SESSION['security_question']);
+                        unset($_SESSION['expected_answer']);
                         
                         // Redirect to login after 3 seconds
                         header("Refresh: 3; url=login.php");
@@ -312,8 +327,17 @@ $security_question = $_SESSION['security_question'] ?? $security_question;
                 <div>
                     <h4 class="font-semibold text-yellow-300 text-sm">Demo Notice</h4>
                     <p class="text-yellow-200 text-xs mt-1">
-                        This is a simplified demo. In production, security questions would be user-defined
-                        and answers would be verified against stored values.
+                        <strong>Demo Credentials:</strong> For security questions, use these answers:<br>
+                        • First pet: <strong>Buddy</strong><br>
+                        • Birth city: <strong>Springfield</strong><br>
+                        • Mother's maiden name: <strong>Johnson</strong><br>
+                        • First school: <strong>Maple Elementary</strong><br>
+                        • Favorite book: <strong>The Great Gatsby</strong><br>
+                        • Childhood nickname: <strong>Ace</strong><br>
+                        • Childhood friend: <strong>Mike</strong><br>
+                        • Childhood street: <strong>Oak Street</strong><br>
+                        • Dream job: <strong>Astronaut</strong><br>
+                        • Teacher's last name: <strong>Davis</strong>
                     </p>
                 </div>
             </div>
