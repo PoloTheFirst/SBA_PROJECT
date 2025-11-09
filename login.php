@@ -65,7 +65,7 @@
                     <input type="checkbox" id="remember" name="remember" class="mr-2">
                     <label for="remember" class="text-white text-sm">Remember me</label>
                 </div>
-                <a href="forgot-password.php" class="text-blue-300 text-sm hover:text-white transition-colors">Forgot password?</a>
+                <a href="forgot_password.php" class="text-blue-300 text-sm hover:text-white transition-colors">Forgot password?</a>
             </div>
 
             <button type="submit"
