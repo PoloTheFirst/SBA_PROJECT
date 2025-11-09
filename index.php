@@ -494,9 +494,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
             <h3 class="text-2xl font-bold text-white mb-6 text-center">Explore TravelGO Orbit</h3>
             <div class="video-container mx-auto max-w-4xl">
                 <video controls class="w-full rounded-lg shadow-lg">
-                    <source src="assets/TravelGO_Orbits_Promo_Video.mp4" type="video/mp4">
-                    <source src="assets/TravelGO_Orbits_Promo_Video.webm" type="video/webm">
-                    <source src="assets/TravelGO_Orbits_Promo_Video.ogv" type="video/ogg">
+                    <source src="./assets/TravelGO_Orbits_Promo_Video.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
             </div>
@@ -588,7 +586,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                 <p class="text-blue-100 mb-8 max-w-2xl mx-auto">Subscribe to our newsletter and receive exclusive offers, travel tips, and destination inspiration straight to your inbox.</p>
                 <form class="max-w-md mx-auto flex">
                     <input type="email" placeholder="Your email address" class="flex-grow py-3 px-4 rounded-l-lg focus:outline-none text-gray-800">
-                    <button type="submit" class="btn-primary font-bold py-3 px-6 rounded-r-lg transition-colors" onclick="window.location.href='content_page/underdevelop.php'; return false;">
+                    <button type="submit" class="btn-primary font-bold py-3 px-6 rounded-r-lg transition-colors">
                         Subscribe <i data-feather="send" class="inline ml-2"></i>
                     </button>
                 </form>
