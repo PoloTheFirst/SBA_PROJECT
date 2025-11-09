@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Move to next step
-        $step = min($step + 1, 5);
+        $step = min($step + 1, 6);
         header("Location: payment.php?step=$step");
         exit();
     } elseif ($action === 'previous_step') {
@@ -111,8 +111,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     } elseif ($action === 'process_payment') {
         // Process the final payment
-        processPayment();
-        exit();
+        if (processPayment()) {
+            $step = 6;
+            header("Location: payment.php?step=6");
+            exit();
+        } else {
+            header("Location: payment.php?step=5");
+            exit();
+        }
     }
 }
 
@@ -223,27 +229,155 @@ function processPayment()
         // Store booking reference for receipt page
         $_SESSION['booking_reference'] = $booking_ref;
         $_SESSION['booking_id'] = $booking_id;
+        $_SESSION['transaction_id'] = $transaction_id;
+        $_SESSION['final_total'] = $final_total;
 
-        // Clear payment data but keep booking reference for receipt
-        $booking_reference = $_SESSION['booking_reference'];
-        unset($_SESSION['payment_data']);
+        error_log("Payment processed successfully, ready for receipt step");
 
-        error_log("Redirecting to receipt.php with booking reference: $booking_reference");
-
-        // Ensure session is written before redirect
-        session_write_close();
-
-        // Redirect to receipt page
-        header("Location: receipt.php");
-        exit();
+        return true;
     } catch (Exception $e) {
         $pdo->rollBack();
         error_log("Payment processing error: " . $e->getMessage());
         error_log("Error in file: " . $e->getFile() . " on line: " . $e->getLine());
         $_SESSION['payment_error'] = "Payment processing failed. Please try again. Error: " . $e->getMessage();
-        header("Location: payment.php?step=5");
-        exit();
+        return false;
     }
+}
+
+function generateBookingSummary() {
+    if (!isset($_SESSION['booking_reference'])) {
+        return null;
+    }
+
+    return [
+        'booking_reference' => $_SESSION['booking_reference'],
+        'booking_id' => $_SESSION['booking_id'],
+        'transaction_id' => $_SESSION['transaction_id'],
+        'total_amount' => $_SESSION['final_total'],
+        'flight_details' => $_SESSION['payment_data']['flight_details'] ?? [],
+        'passenger_info' => $_SESSION['payment_data']['passenger_info'] ?? [],
+        'selected_seats' => $_SESSION['payment_data']['selected_seats'] ?? [],
+        'booking_date' => date('Y-m-d H:i:s')
+    ];
+}
+
+function displayIntegratedReceipt() {
+    $bookingSummary = generateBookingSummary();
+    if (!$bookingSummary) {
+        return '<div class="bg-red-900 text-white p-4 rounded">Receipt data not available.</div>';
+    }
+
+    $flight = $bookingSummary['flight_details'];
+    $passengers = $bookingSummary['passenger_info'];
+    
+    ob_start(); ?>
+    <div class="receipt-container bg-white text-gray-900 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+        <div class="text-center mb-6">
+            <h2 class="text-3xl font-bold text-green-600">Booking Confirmed!</h2>
+            <p class="text-gray-600">Your flight has been successfully booked</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-gray-50 p-4 rounded">
+                <h3 class="font-semibold mb-2">Booking Details</h3>
+                <p><strong>Reference:</strong> <?= $bookingSummary['booking_reference'] ?></p>
+                <p><strong>Transaction ID:</strong> <?= $bookingSummary['transaction_id'] ?></p>
+                <p><strong>Booking Date:</strong> <?= date('F j, Y g:i A', strtotime($bookingSummary['booking_date'])) ?></p>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded">
+                <h3 class="font-semibold mb-2">Flight Information</h3>
+                <p><strong>Airline:</strong> <?= htmlspecialchars($flight['airline_name']) ?></p>
+                <p><strong>Flight:</strong> <?= htmlspecialchars($flight['flight_number']) ?></p>
+                <p><strong>Route:</strong> <?= htmlspecialchars($flight['origin']) ?> → <?= htmlspecialchars($flight['destination']) ?></p>
+            </div>
+        </div>
+
+        <!-- Passenger Information -->
+        <div class="bg-gray-50 p-4 rounded mb-6">
+            <h3 class="font-semibold mb-2">Passenger Information</h3>
+            <?php foreach ($passengers as $index => $passenger): ?>
+                <div class="mb-2">
+                    <strong>Passenger <?= $index === 'passenger_1' ? '1 (Primary)' : substr($index, -1) ?>:</strong>
+                    <?= htmlspecialchars($passenger['first_name']) ?> <?= htmlspecialchars($passenger['last_name']) ?>
+                    (<?= ucfirst($passenger['gender']) ?>)
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Selected Seats -->
+        <?php if (!empty($bookingSummary['selected_seats'])): ?>
+        <div class="bg-gray-50 p-4 rounded mb-6">
+            <h3 class="font-semibold mb-2">Selected Seats</h3>
+            <p><?= is_array($bookingSummary['selected_seats']) ? implode(', ', $bookingSummary['selected_seats']) : $bookingSummary['selected_seats'] ?></p>
+        </div>
+        <?php endif; ?>
+
+        <!-- Payment Summary -->
+        <div class="bg-gray-50 p-4 rounded mb-6">
+            <h3 class="font-semibold mb-2">Payment Summary</h3>
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <span>Flight Cost:</span>
+                    <span>HKD $<?= number_format($_SESSION['payment_data']['base_amount'] ?? 0, 2) ?></span>
+                </div>
+                <?php if (isset($_SESSION['payment_data']['tax_amount']) && $_SESSION['payment_data']['tax_amount'] > 0): ?>
+                <div class="flex justify-between">
+                    <span>Taxes & Fees (3%):</span>
+                    <span>HKD $<?= number_format($_SESSION['payment_data']['tax_amount'] ?? 0, 2) ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if (($_SESSION['payment_data']['seat_charges'] ?? 0) > 0): ?>
+                <div class="flex justify-between">
+                    <span>Seat Selection Charges:</span>
+                    <span>HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?></span>
+                </div>
+                <?php endif; ?>
+                <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
+                    <span>Total Amount:</span>
+                    <span class="text-green-600">HKD $<?= number_format($bookingSummary['total_amount'], 2) ?></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div class="flex">
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Important:</strong> Your booking confirmation has been sent to your email. 
+                        Please present this receipt at check-in.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mt-8 pt-6 border-t">
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">
+                Print Receipt
+            </button>
+            <a href="dashboard.php?view=bookings" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded">
+                View in Dashboard
+            </a>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+function handleSixStepBooking() {
+    global $step;
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'process_payment') {
+        if (processPayment()) {
+            $step = 6;
+            return true;
+        }
+    }
+    return false;
+}
+
+function generateBookingConfirmation() {
+    return generateBookingSummary();
 }
 
 // Generate seat map
@@ -427,12 +561,35 @@ $seat_map = generateSeatMap();
             font-weight: bold;
             color: #f59e0b;
         }
+
+        /* Receipt Styles */
+        .receipt-container {
+            background: white;
+            color: #1f2937;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .receipt-container {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            body {
+                background: white !important;
+                color: black !important;
+            }
+        }
     </style>
 </head>
 
 <body class="min-h-screen bg-gray-900">
     <!-- Navigation -->
-    <nav class="bg-gray-800 text-white py-4">
+    <nav class="bg-gray-800 text-white py-4 no-print">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <a href="index.php" class="flex items-center space-x-2">
@@ -454,17 +611,17 @@ $seat_map = generateSeatMap();
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <!-- Progress Indicator -->
-        <div class="card-dark rounded-lg p-6 mb-8">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Progress Indicator - Updated for 6 steps -->
+        <div class="card-dark rounded-lg p-6 mb-8 no-print">
             <div class="flex justify-between items-center">
-                <?php for ($i = 1; $i <= 5; $i++): ?>
+                <?php for ($i = 1; $i <= 6; $i++): ?>
                     <div class="flex items-center">
                         <div class="progress-step w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 <?= $i == $step ? 'border-yellow-500 bg-yellow-500 text-blue-900' : ($i < $step ? 'border-green-500 bg-green-500 text-white' : 'border-gray-500 bg-gray-700 text-gray-300') ?>">
                             <?= $i < $step ? '<i data-feather="check"></i>' : $i ?>
                         </div>
-                        <?php if ($i < 5): ?>
-                            <div class="w-16 h-1 <?= $i < $step ? 'bg-green-500' : 'bg-gray-600' ?> mx-2"></div>
+                        <?php if ($i < 6): ?>
+                            <div class="w-12 h-1 <?= $i < $step ? 'bg-green-500' : 'bg-gray-600' ?> mx-2"></div>
                         <?php endif; ?>
                     </div>
                 <?php endfor; ?>
@@ -475,22 +632,24 @@ $seat_map = generateSeatMap();
                 <span class="<?= $step >= 3 ? 'text-yellow-400 font-semibold' : '' ?>">Payment</span>
                 <span class="<?= $step >= 4 ? 'text-yellow-400 font-semibold' : '' ?>">Seats</span>
                 <span class="<?= $step >= 5 ? 'text-yellow-400 font-semibold' : '' ?>">Confirm</span>
+                <span class="<?= $step >= 6 ? 'text-yellow-400 font-semibold' : '' ?>">Receipt</span>
             </div>
         </div>
 
         <!-- Error Message -->
         <?php if (isset($_SESSION['payment_error'])): ?>
-            <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4">
+            <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4 no-print">
                 <?= $_SESSION['payment_error'] ?>
                 <?php unset($_SESSION['payment_error']); ?>
             </div>
         <?php endif; ?>
 
         <!-- Step Content -->
-        <div class="card-dark rounded-lg p-6">
-            <?php if ($step < 5): ?>
-                <form method="POST" id="payment-form">
-                    <input type="hidden" name="action" value="save_step">
+        <div class="<?= $step == 6 ? '' : 'card-dark rounded-lg p-6 no-print' ?>" id="step-content">
+            <?php if ($step < 6): ?>
+                <?php if ($step < 5): ?>
+                    <form method="POST" id="payment-form">
+                        <input type="hidden" name="action" value="save_step">
                 <?php endif; ?>
 
                 <?php
@@ -968,14 +1127,14 @@ $seat_map = generateSeatMap();
                 <!-- Navigation Buttons -->
                 <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
                     <?php if ($step > 1): ?>
-                        <?php if ($step < 5): ?>
+                        <?php if ($step < 6): ?>
                             <button type="submit" name="action" value="previous_step"
                                 class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
                                 <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
                                 Previous
                             </button>
                         <?php else: ?>
-                            <a href="payment.php?step=4" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                            <a href="payment.php?step=5" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
                                 <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
                                 Previous
                             </a>
@@ -1005,7 +1164,18 @@ $seat_map = generateSeatMap();
                 </div>
 
                 <?php if ($step < 5): ?>
-                </form>
+                    </form>
+                <?php endif; ?>
+            <?php else: ?>
+                <!-- Step 6: Receipt -->
+                <?= displayIntegratedReceipt(); ?>
+                
+                <div class="flex justify-center mt-8 no-print">
+                    <a href="dashboard.php?view=bookings" 
+                       class="bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
+                        Go to Dashboard
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -1053,8 +1223,8 @@ $seat_map = generateSeatMap();
         document.getElementById('use-profile-btn')?.addEventListener('click', function() {
             <?php if (isset($user)): ?>
                 // Fill first passenger with user data
-                const firstName = '<?= addslashes($user['first_name'] ?? '') ?>';
-                const lastName = '<?= addslashes($user['last_name'] ?? '') ?>';
+                const firstName = '<?= addslashes($user['name'] ?? '') ?>'.split(' ')[0] || '';
+                const lastName = '<?= addslashes($user['name'] ?? '') ?>'.split(' ').slice(1).join(' ') || '';
 
                 document.querySelector('input[name="step_data[passenger_info][passenger_1][first_name]"]').value = firstName;
                 document.querySelector('input[name="step_data[passenger_info][passenger_1][last_name]"]').value = lastName;
