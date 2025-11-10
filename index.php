@@ -586,7 +586,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                 <p class="text-blue-100 mb-8 max-w-2xl mx-auto">Subscribe to our newsletter and receive exclusive offers, travel tips, and destination inspiration straight to your inbox.</p>
                 <form class="max-w-md mx-auto flex">
                     <input type="email" placeholder="Your email address" class="flex-grow py-3 px-4 rounded-l-lg focus:outline-none text-gray-800">
-                    <button type="submit" class="btn-primary font-bold py-3 px-6 rounded-r-lg transition-colors">
+                    <button type="button" class="btn-primary font-bold py-3 px-6 rounded-r-lg transition-colors" onclick="window.location.href='content_page/underdevelop.php';">
                         Subscribe <i data-feather="send" class="inline ml-2"></i>
                     </button>
                 </form>
