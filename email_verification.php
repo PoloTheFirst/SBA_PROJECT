@@ -1,5 +1,3 @@
-[file name]: email_verification.php
-[file content begin]
 <?php
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -120,146 +118,79 @@ function sendVerificationEmail($toEmail, $userName, $token) {
         // Create verification URL
         $verificationUrl = "http://" . $_SERVER['HTTP_HOST'] . "/SBA_PROJECT/verify_email.php?token=" . $token;
         
-        // Updated email content with website color scheme - matching index.php
+        // Updated email content with website color scheme
         $mail->Body = "
         <!DOCTYPE html>
         <html>
         <head>
-            <meta charset='UTF-8'>
-            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-            <title>Email Verification - TravelGO Orbit</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-                
                 body { 
                     font-family: 'Poppins', sans-serif; 
                     background-color: #111827; 
                     color: #ffffff; 
                     margin: 0; 
                     padding: 0; 
-                    line-height: 1.6;
                 }
-                
                 .container { 
                     max-width: 600px; 
                     margin: 0 auto; 
-                    background: #1f2937;
-                    border-radius: 12px;
+                    background: rgba(255, 255, 255, 0.1); 
+                    backdrop-filter: blur(10px); 
+                    border: 1px solid rgba(255, 255, 255, 0.2); 
+                    border-radius: 10px;
                     overflow: hidden;
-                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
                 }
-                
                 .header { 
-                    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
+                    background: linear-gradient(135deg, #f59e0b, #1e3a8a); 
                     color: white; 
-                    padding: 40px 30px; 
+                    padding: 30px; 
                     text-align: center; 
                 }
-                
                 .logo {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 12px;
-                    margin-bottom: 20px;
-                    font-size: 28px;
+                    gap: 10px;
+                    margin-bottom: 15px;
+                    font-size: 24px;
                     font-weight: bold;
                 }
-                
-                .logo-icon {
-                    font-size: 32px;
-                    color: #f59e0b;
-                }
-                
                 .content { 
                     background: #1f2937; 
                     padding: 40px; 
                 }
-                
                 .button { 
                     background: #f59e0b; 
                     color: #1e3a8a; 
-                    padding: 16px 40px; 
+                    padding: 15px 35px; 
                     text-decoration: none; 
                     border-radius: 8px; 
                     font-weight: bold; 
                     display: inline-block;
                     font-size: 16px;
                     transition: all 0.3s ease;
-                    border: none;
-                    cursor: pointer;
-                    text-align: center;
                 }
-                
                 .button:hover {
                     background: #d97706;
                     transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
                 }
-                
                 .footer { 
                     text-align: center; 
-                    margin-top: 40px; 
+                    margin-top: 30px; 
                     font-size: 12px; 
                     color: #9ca3af; 
-                    padding: 30px 20px;
+                    padding: 20px;
                     border-top: 1px solid #374151;
-                    background: #111827;
                 }
-                
                 .verification-link {
                     background: #374151;
-                    padding: 16px;
-                    border-radius: 8px;
+                    padding: 15px;
+                    border-radius: 5px;
                     word-break: break-all;
-                    margin: 25px 0;
+                    margin: 20px 0;
                     font-family: monospace;
                     color: #f59e0b;
-                    border: 1px solid #4b5563;
-                    font-size: 14px;
-                }
-                
-                .info-box {
-                    background: rgba(59, 130, 246, 0.1);
-                    border: 1px solid #3b82f6;
-                    border-radius: 8px;
-                    padding: 20px;
-                    margin: 25px 0;
-                }
-                
-                .step-item {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                    padding: 12px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 8px;
-                }
-                
-                .step-icon {
-                    color: #10b981;
-                    font-weight: bold;
-                    min-width: 24px;
-                }
-                
-                @media only screen and (max-width: 600px) {
-                    .container {
-                        margin: 10px;
-                        border-radius: 8px;
-                    }
-                    
-                    .content {
-                        padding: 25px 20px;
-                    }
-                    
-                    .header {
-                        padding: 30px 20px;
-                    }
-                    
-                    .logo {
-                        font-size: 24px;
-                    }
                 }
             </style>
         </head>
@@ -267,64 +198,29 @@ function sendVerificationEmail($toEmail, $userName, $token) {
             <div class='container'>
                 <div class='header'>
                     <div class='logo'>
-                        <span class='logo-icon'>✈</span>
+                        <span style='color: #f59e0b;'>✈</span>
                         <span>TravelGO Orbit</span>
                     </div>
-                    <h1 style='margin: 0; font-size: 28px; font-weight: 600;'>Email Verification Required</h1>
-                    <p style='margin: 10px 0 0 0; opacity: 0.9;'>Complete your account activation</p>
+                    <h2>Email Verification Required</h2>
                 </div>
-                
                 <div class='content'>
-                    <h2 style='color: #f59e0b; margin-bottom: 20px; font-size: 22px;'>Hello " . htmlspecialchars($userName) . ",</h2>
-                    
-                    <p style='line-height: 1.6; margin-bottom: 25px; color: #d1d5db;'>
-                        Thank you for registering with <strong>TravelGO Orbit</strong>! To complete your account setup 
-                        and access all features, please verify your email address by clicking the button below:
-                    </p>
+                    <h3 style='color: #f59e0b; margin-bottom: 20px;'>Hello " . htmlspecialchars($userName) . ",</h3>
+                    <p style='line-height: 1.6; margin-bottom: 25px;'>Thank you for registering with TravelGO Orbit! To complete your account setup and access all features, please verify your email address by clicking the button below:</p>
                     
                     <div style='text-align: center; margin: 35px 0;'>
-                        <a href='" . $verificationUrl . "' class='button' style='color: #1e3a8a; text-decoration: none;'>
-                            Verify Email Address
-                        </a>
+                        <a href='" . $verificationUrl . "' class='button'>Verify Email Address</a>
                     </div>
                     
-                    <div class='info-box'>
-                        <h3 style='color: #93c5fd; margin-top: 0; font-size: 16px;'>What happens next?</h3>
-                        <div class='step-item'>
-                            <span class='step-icon'>✓</span>
-                            <span>Click the verification link in your email</span>
-                        </div>
-                        <div class='step-item'>
-                            <span class='step-icon'>✓</span>
-                            <span>Your account will be fully activated</span>
-                        </div>
-                        <div class='step-item'>
-                            <span class='step-icon'>✓</span>
-                            <span>Start exploring and booking your travels</span>
-                        </div>
-                    </div>
-                    
-                    <p style='margin-bottom: 10px; color: #d1d5db;'>Or copy and paste this link in your browser:</p>
+                    <p style='margin-bottom: 10px;'>Or copy and paste this link in your browser:</p>
                     <div class='verification-link'>" . $verificationUrl . "</div>
                     
-                    <div style='background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 25px 0;'>
-                        <p style='color: #f59e0b; font-weight: bold; margin: 0; text-align: center;'>
-                            ⚠ This link will expire in 24 hours.
-                        </p>
-                    </div>
+                    <p style='color: #f59e0b; font-weight: bold; margin: 25px 0;'>This link will expire in 24 hours.</p>
                     
-                    <p style='color: #9ca3af; font-size: 14px; line-height: 1.5;'>
-                        If you didn't create an account with TravelGO Orbit, please ignore this email. 
-                        Your email address was entered by someone else during registration.
-                    </p>
+                    <p style='color: #9ca3af; font-size: 14px;'>If you didn't create an account with TravelGO Orbit, please ignore this email.</p>
                 </div>
-                
                 <div class='footer'>
-                    <p style='margin: 0 0 10px 0;'>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
-                    <p style='margin: 5px 0; color: #6b7280;'>Travel Street, Hong Kong SAR</p>
-                    <p style='margin: 5px 0; color: #6b7280; font-size: 11px;'>
-                        This is an automated message. Please do not reply to this email.
-                    </p>
+                    <p>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
+                    <p style='margin-top: 10px;'>Travel Street, Hong Kong SAR</p>
                 </div>
             </div>
         </body>
