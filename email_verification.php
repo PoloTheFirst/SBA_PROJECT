@@ -1,3 +1,4 @@
+[file name]: email_verification.php
 <?php
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
