@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 09, 2025 at 03:00 PM
+-- Generation Time: Nov 10, 2025 at 02:10 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -34,22 +34,24 @@ CREATE TABLE `bookings` (
   `flight_type` enum('one_way','round_trip') NOT NULL,
   `flight_id` int(11) DEFAULT NULL,
   `flight_details` text DEFAULT NULL,
-  `passenger_count` int(11) DEFAULT 1,
   `selected_seats` text DEFAULT NULL,
   `seat_charges` decimal(10,2) DEFAULT 0.00,
-  `departure_date` date DEFAULT NULL,
-  `return_date` date DEFAULT NULL,
   `passenger_info` text DEFAULT NULL,
   `billing_address` text DEFAULT NULL,
   `payment_method` varchar(50) DEFAULT NULL,
   `total_amount` decimal(10,2) NOT NULL,
   `status` enum('pending','confirmed','cancelled') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `payment_status` enum('pending','completed','failed') DEFAULT 'pending',
-  `booking_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `traveler_details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`traveler_details`))
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `bookings`
+--
+
+INSERT INTO `bookings` (`id`, `user_id`, `booking_reference`, `flight_type`, `flight_id`, `flight_details`, `selected_seats`, `seat_charges`, `passenger_info`, `billing_address`, `payment_method`, `total_amount`, `status`, `created_at`, `updated_at`) VALUES
+(1, NULL, 'TG8C1EF0F6E8', 'round_trip', 2, '{\"flight_id\":\"2\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":2,\"flight_number\":\"JL736\",\"airline_code\":\"JL\",\"airline_name\":\"Japan Airlines\",\"origin\":\"Hong Kong\",\"destination\":\"Tokyo\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"14:30:00\",\"arrival_time\":\"19:00:00\",\"return_departure_time\":\"09:00:00\",\"return_arrival_time\":\"13:30:00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\",\"stops\":0,\"return_stops\":0,\"price\":\"3500.00\",\"class\":\"economy\",\"seats_available\":32,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"1\",\"selected_seats\":\"[\\\"6E\\\"]\",\"seat_charges\":\"0\",\"base_amount\":3500,\"tax_amount\":105,\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-10-01\"}}', '{\"street\":\"kkek\",\"city\":\"Central\",\"state\":\"Yau Tsim Mong\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 3605.00, 'confirmed', '2025-11-09 19:49:36', '2025-11-09 19:49:36'),
+(2, NULL, 'TGE665BB54AF', 'round_trip', 2, '{\"flight_id\":\"2\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":2,\"flight_number\":\"JL736\",\"airline_code\":\"JL\",\"airline_name\":\"Japan Airlines\",\"origin\":\"Hong Kong\",\"destination\":\"Tokyo\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"14:30:00\",\"arrival_time\":\"19:00:00\",\"return_departure_time\":\"09:00:00\",\"return_arrival_time\":\"13:30:00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\",\"stops\":0,\"return_stops\":0,\"price\":\"3500.00\",\"class\":\"economy\",\"seats_available\":31,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"1\",\"selected_seats\":\"[\\\"2D\\\"]\",\"seat_charges\":\"50\",\"base_amount\":3500,\"tax_amount\":105,\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-10-01\"}}', '{\"street\":\"kkek\",\"city\":\"Central\",\"state\":\"Yau Tsim Mong\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 3655.00, 'confirmed', '2025-11-09 21:50:28', '2025-11-09 21:50:28');
 
 -- --------------------------------------------------------
 
@@ -181,13 +183,6 @@ CREATE TABLE `email_verification_tokens` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `email_verification_tokens`
---
-
-INSERT INTO `email_verification_tokens` (`id`, `user_id`, `token`, `expires_at`, `created_at`) VALUES
-(2, 5, 'b7f78cfeacae82eb3f67c0ac4b8c5f3f5d5a423c9f02140c35f6c5859b8da15f', '2025-10-27 05:59:09', '2025-10-27 03:59:09');
-
 -- --------------------------------------------------------
 
 --
@@ -252,30 +247,13 @@ INSERT INTO `locations` (`id`, `type`, `code`, `name`, `city_name`, `country_nam
 CREATE TABLE `notifications` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `type` enum('booking','security','promotion','system') NOT NULL,
+  `type` enum('booking','security','promotion','system','profile') NOT NULL,
   `title` varchar(255) NOT NULL,
   `message` text NOT NULL,
   `is_read` tinyint(1) DEFAULT 0,
   `action_url` varchar(500) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `notifications`
---
-
-INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `is_read`, `action_url`, `created_at`) VALUES
-(10, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:40:30'),
-(11, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:45:07'),
-(12, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:45:23'),
-(13, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:46:08'),
-(14, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:46:16'),
-(15, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:46:22'),
-(16, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:46:29'),
-(17, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:46:37'),
-(18, 5, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-26 13:55:24'),
-(19, 7, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-28 01:34:38'),
-(20, 7, '', 'Profile Updated', 'Your profile information was updated.', 0, NULL, '2025-10-28 01:35:01');
 
 -- --------------------------------------------------------
 
@@ -312,7 +290,7 @@ CREATE TABLE `round_trip_flights` (
 
 INSERT INTO `round_trip_flights` (`id`, `flight_number`, `airline_code`, `airline_name`, `origin`, `destination`, `departure_date`, `return_date`, `departure_time`, `arrival_time`, `return_departure_time`, `return_arrival_time`, `duration`, `return_duration`, `stops`, `return_stops`, `price`, `class`, `seats_available`, `created_at`) VALUES
 (1, 'CX888', 'CX', 'Cathay Pacific', 'Hong Kong', 'Tokyo', '2025-10-15', '2025-10-22', '08:00:00', '12:30:00', '14:00:00', '18:30:00', '4h 30m', '4h 30m', 0, 0, 3200.00, 'economy', 45, '2025-10-09 05:30:10'),
-(2, 'JL736', 'JL', 'Japan Airlines', 'Hong Kong', 'Tokyo', '2025-10-15', '2025-10-22', '14:30:00', '19:00:00', '09:00:00', '13:30:00', '4h 30m', '4h 30m', 0, 0, 3500.00, 'economy', 32, '2025-10-09 05:30:10'),
+(2, 'JL736', 'JL', 'Japan Airlines', 'Hong Kong', 'Tokyo', '2025-10-15', '2025-10-22', '14:30:00', '19:00:00', '09:00:00', '13:30:00', '4h 30m', '4h 30m', 0, 0, 3500.00, 'economy', 30, '2025-10-09 05:30:10'),
 (3, 'NH812', 'NH', 'All Nippon Airways', 'Hong Kong', 'Tokyo', '2025-10-15', '2025-10-22', '20:15:00', '00:45:00', '16:30:00', '21:00:00', '4h 30m', '4h 30m', 0, 0, 3800.00, 'economy', 28, '2025-10-09 05:30:10'),
 (4, 'CX451', 'CX', 'Cathay Pacific', 'Hong Kong', 'Bangkok', '2025-10-15', '2025-10-22', '09:30:00', '11:45:00', '13:00:00', '17:15:00', '2h 15m', '4h 15m', 0, 1, 2800.00, 'economy', 50, '2025-10-09 05:30:10'),
 (5, 'TG639', 'TG', 'Thai Airways', 'Hong Kong', 'Bangkok', '2025-10-15', '2025-10-22', '16:45:00', '19:00:00', '08:30:00', '12:45:00', '2h 15m', '4h 15m', 0, 1, 2600.00, 'economy', 38, '2025-10-09 05:30:10');
@@ -379,6 +357,14 @@ CREATE TABLE `transactions` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `transactions`
+--
+
+INSERT INTO `transactions` (`id`, `booking_id`, `transaction_id`, `amount`, `currency`, `payment_method`, `status`, `created_at`, `updated_at`) VALUES
+(1, 1, 'TXN508A69CED00697F0', 3605.00, 'HKD', 'paypal', 'success', '2025-11-09 19:49:36', '2025-11-09 19:49:36'),
+(2, 2, 'TXN1A16E7271142A935', 3655.00, 'HKD', 'paypal', 'success', '2025-11-09 21:50:28', '2025-11-09 21:50:28');
+
 -- --------------------------------------------------------
 
 --
@@ -396,6 +382,7 @@ CREATE TABLE `users` (
   `phone` varchar(20) DEFAULT NULL,
   `address` text DEFAULT NULL,
   `state_id` int(11) DEFAULT NULL,
+  `country_id` int(11) DEFAULT NULL,
   `billing_street` varchar(255) DEFAULT NULL,
   `billing_city` varchar(100) DEFAULT NULL,
   `billing_state_id` int(11) DEFAULT NULL,
@@ -421,9 +408,8 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `name`, `email`, `password_hash`, `phone`, `address`, `state_id`, `billing_street`, `billing_city`, `billing_state_id`, `billing_zip`, `billing_country`, `city_id`, `postal_code`, `date_of_birth`, `gender`, `secret_2fa`, `is_2fa_enabled`, `email_verified`, `email_verification_token`, `verification_token_expires`, `backup_codes`, `created_at`, `updated_at`, `profile_picture`, `preferences`) VALUES
-(5, 'Polo01', 'Tin Yan', 'To', 'Tin Yan To', 'polo1st2023@gmail.com', '$2y$10$.U98fBbTkErN33hMwfNmf.YAm7lbHbkmQLO5prhpGnM7L9beZqVSy', '+852 55441153', 'kkek', 20, NULL, NULL, NULL, NULL, NULL, 25, '999077', '2007-10-01', 'male', NULL, 0, 0, NULL, NULL, NULL, '2025-10-26 13:21:49', '2025-10-27 08:32:02', 'uploads/avatars/avatar_5_1761486921.jpg', NULL),
-(7, 'Polo02', 'Tin Yan', 'To', 'Tin', 'polo2nd2024@gmail.com', '$2y$10$aJOoARskJ.8HnM2jIpCKZOAqKs5sbX.KXxcOZ7z0ePkXRMb9KxKUO', '+852 55441153', '38oiuytree4t5iop', 22, NULL, NULL, NULL, NULL, NULL, 27, '999077', '2007-09-30', 'male', NULL, 0, 0, NULL, NULL, NULL, '2025-10-28 00:52:39', '2025-10-28 01:35:33', 'uploads/avatars/avatar_7_1761615333.jpg', NULL);
+INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `name`, `email`, `password_hash`, `phone`, `address`, `state_id`, `country_id`, `billing_street`, `billing_city`, `billing_state_id`, `billing_zip`, `billing_country`, `city_id`, `postal_code`, `date_of_birth`, `gender`, `secret_2fa`, `is_2fa_enabled`, `email_verified`, `email_verification_token`, `verification_token_expires`, `backup_codes`, `created_at`, `updated_at`, `profile_picture`, `preferences`) VALUES
+(1, 'Polo01', 'Tin Yan ', 'To', 'Tin Yan  To', 'polo1st2023@gmail.com', '$2y$10$Sz2gPa1eBNtjoDB7JC4SEe3ENA9XiWeUWzm/TVptQAub2LOCOvDCO', '+852 55441153', '1234567890', 21, NULL, NULL, NULL, NULL, NULL, NULL, 27, '999077', '2007-11-01', 'male', NULL, 0, 1, NULL, NULL, NULL, '2025-11-10 12:32:12', '2025-11-10 13:03:03', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -473,9 +459,9 @@ ALTER TABLE `bookings`
   ADD KEY `idx_user_status` (`user_id`,`status`),
   ADD KEY `idx_booking_ref` (`booking_reference`),
   ADD KEY `idx_user_bookings` (`user_id`,`created_at`),
-  ADD KEY `idx_booking_reference` (`booking_reference`),
-  ADD KEY `idx_payment_status` (`payment_status`),
-  ADD KEY `idx_booking_date` (`booking_date`);
+  ADD KEY `idx_bookings_created` (`created_at`),
+  ADD KEY `idx_bookings_status` (`status`),
+  ADD KEY `bookings_round_trip_flights_fk` (`flight_id`);
 
 --
 -- Indexes for table `cities`
@@ -516,7 +502,8 @@ ALTER TABLE `locations`
 --
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `idx_notifications_user_read` (`user_id`,`is_read`),
+  ADD KEY `idx_notifications_created` (`created_at`);
 
 --
 -- Indexes for table `round_trip_flights`
@@ -539,7 +526,8 @@ ALTER TABLE `transactions`
   ADD UNIQUE KEY `transaction_id` (`transaction_id`),
   ADD KEY `booking_id` (`booking_id`),
   ADD KEY `idx_booking_id` (`booking_id`),
-  ADD KEY `idx_transaction_id` (`transaction_id`);
+  ADD KEY `idx_transaction_id` (`transaction_id`),
+  ADD KEY `idx_transactions_created` (`created_at`);
 
 --
 -- Indexes for table `users`
@@ -551,7 +539,9 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `username_unique` (`username`),
   ADD KEY `city_id` (`city_id`),
   ADD KEY `state_id` (`state_id`),
-  ADD KEY `billing_state_id` (`billing_state_id`);
+  ADD KEY `billing_state_id` (`billing_state_id`),
+  ADD KEY `users_ibfk_country` (`country_id`),
+  ADD KEY `idx_users_email_verified` (`email_verified`);
 
 --
 -- Indexes for table `user_sessions`
@@ -565,7 +555,7 @@ ALTER TABLE `user_sessions`
 --
 ALTER TABLE `user_wishlist`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `idx_wishlist_user_created` (`user_id`,`created_at`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -575,7 +565,7 @@ ALTER TABLE `user_wishlist`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `cities`
@@ -599,7 +589,7 @@ ALTER TABLE `destinations`
 -- AUTO_INCREMENT for table `email_verification_tokens`
 --
 ALTER TABLE `email_verification_tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `locations`
@@ -611,7 +601,7 @@ ALTER TABLE `locations`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `round_trip_flights`
@@ -629,13 +619,13 @@ ALTER TABLE `states`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `user_sessions`
@@ -657,7 +647,9 @@ ALTER TABLE `user_wishlist`
 -- Constraints for table `bookings`
 --
 ALTER TABLE `bookings`
-  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `bookings_ibfk_flight` FOREIGN KEY (`flight_id`) REFERENCES `round_trip_flights` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `bookings_round_trip_flights_fk` FOREIGN KEY (`flight_id`) REFERENCES `round_trip_flights` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `cities`
@@ -701,7 +693,8 @@ ALTER TABLE `transactions`
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`id`),
   ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`state_id`) REFERENCES `states` (`id`),
-  ADD CONSTRAINT `users_ibfk_3` FOREIGN KEY (`billing_state_id`) REFERENCES `states` (`id`);
+  ADD CONSTRAINT `users_ibfk_3` FOREIGN KEY (`billing_state_id`) REFERENCES `states` (`id`),
+  ADD CONSTRAINT `users_ibfk_country` FOREIGN KEY (`country_id`) REFERENCES `countries` (`id`);
 
 --
 -- Constraints for table `user_sessions`
