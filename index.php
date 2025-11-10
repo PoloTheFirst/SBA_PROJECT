@@ -482,7 +482,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                 </div>
 
                 <div class="text-center mt-12">
-                    <button class="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-blue-900 font-bold py-3 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg">
+                    <button class="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-blue-900 font-bold py-3 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg" onclick="window.location.href='content_page/underdevelop.php';">
                         View All Destinations <i data-feather="arrow-right" class="inline ml-2"></i>
                     </button>
                 </div>
@@ -602,7 +602,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                         <h3 class="text-xl font-bold mb-4 flex items-center">
                             <i data-feather="navigation" class="mr-2"></i> TravelGO Orbit
                         </h3>
-                        <p class="text-gray-300 mb-4">Making travel simple, affordable and unforgettable since 2023.</p>
+                        <p class="text-gray-300 mb-4">Making travel simple, affordable and unforgettable since 2025.</p>
                         <div class="flex space-x-4">
                             <a href="content_page/underdevelop.php" class="text-gray-400 hover:text-white">
                                 <i data-feather="facebook"></i>
@@ -667,7 +667,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                 </div>
 
                 <div class="border-t border-gray-700 mt-12 pt-8 text-center text-gray-400">
-                    <p>© 2023 TravelGO Orbit. All rights reserved.</p>
+                    <p>© 2025 TravelGO Orbit. All rights reserved.</p>
                 </div>
             </div>
         </footer>
