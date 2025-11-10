@@ -58,6 +58,42 @@ try {
     error_log("Dashboard stats error: " . $e->getMessage());
 }
 
+// Get user offers/coupons
+$userOffers = [];
+$availableOffersCount = 0;
+try {
+    // Check if user has any available offers
+    $offersStmt = $pdo->prepare("
+        SELECT uo.*, c.code, c.description, c.discount_type, c.discount_value, c.min_amount, c.max_discount
+        FROM user_offers uo 
+        JOIN coupons c ON uo.offer_code = c.code 
+        WHERE uo.user_id = ? AND uo.is_used = 0 AND uo.valid_until > NOW()
+    ");
+    $offersStmt->execute([$_SESSION['user_id']]);
+    $userOffers = $offersStmt->fetchAll();
+    
+    // Count available offers
+    $availableOffersCount = count($userOffers);
+    
+    // If user has no offers and is eligible for first flight discount, create one
+    if ($availableOffersCount === 0 && $bookingsCount === 0) {
+        $firstOfferStmt = $pdo->prepare("
+            INSERT INTO user_offers (user_id, offer_code, offer_type, discount_percent, minimum_amount, max_discount, valid_from, valid_until)
+            SELECT ?, code, 'first_flight_discount', discount_value, min_amount, max_discount, NOW(), valid_until
+            FROM coupons 
+            WHERE code = 'WELCOME15' AND for_new_users = 1 AND is_active = 1 AND valid_until > NOW()
+        ");
+        $firstOfferStmt->execute([$_SESSION['user_id']]);
+        
+        // Reload offers
+        $offersStmt->execute([$_SESSION['user_id']]);
+        $userOffers = $offersStmt->fetchAll();
+        $availableOffersCount = count($userOffers);
+    }
+} catch (Exception $e) {
+    error_log("Dashboard offers error: " . $e->getMessage());
+}
+
 // Determine current view
 $current_view = $_GET['view'] ?? 'dashboard';
 
@@ -328,6 +364,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['success'] = "Avatar removed successfully.";
             }
             break;
+
+        case 'claim_offer':
+            $offer_id = $_POST['offer_id'] ?? 0;
+            if ($offer_id > 0) {
+                // Check if user already has this offer claimed
+                $checkStmt = $pdo->prepare("SELECT id FROM user_offers WHERE id = ? AND user_id = ? AND is_used = 0");
+                $checkStmt->execute([$offer_id, $_SESSION['user_id']]);
+                
+                if ($checkStmt->fetch()) {
+                    $_SESSION['success'] = "Offer claimed successfully! You can use it during checkout.";
+                } else {
+                    $_SESSION['error'] = "Offer not available or already claimed.";
+                }
+            }
+            break;
     }
 
     // Regenerate CSRF token after POST
@@ -392,6 +443,7 @@ foreach ($bookings as &$booking) {
     $booking['formatted_date'] = date('M j, Y', strtotime($booking['booking_date']));
 }
 unset($booking); // Break the reference
+
 // Get notifications
 $notificationsStmt = $pdo->prepare("
     SELECT * FROM notifications 
@@ -442,6 +494,26 @@ $notifications = $notificationsStmt->fetchAll();
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(5px);
         }
+
+        .offer-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .offer-card:hover {
+            border-color: #f59e0b;
+            transform: translateY(-2px);
+        }
+
+        .offer-card.expanded {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .offer-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #1e3a8a;
+        }
     </style>
 </head>
 
@@ -467,6 +539,10 @@ $notifications = $notificationsStmt->fetchAll();
                 <a href="dashboard.php?view=wishlist" class="sidebar-item <?= $current_view === 'wishlist' ? 'active' : '' ?> flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition-colors">
                     <i data-feather="heart"></i>
                     <span>Wishlist (<?= $wishlistCount ?>)</span>
+                </a>
+                <a href="dashboard.php?view=offers" class="sidebar-item <?= $current_view === 'offers' ? 'active' : '' ?> flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition-colors">
+                    <i data-feather="gift"></i>
+                    <span>Special Offers (<?= $availableOffersCount ?>)</span>
                 </a>
                 <a href="dashboard.php?view=notifications" class="sidebar-item <?= $current_view === 'notifications' ? 'active' : '' ?> flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition-colors">
                     <i data-feather="bell"></i>
@@ -519,6 +595,9 @@ $notifications = $notificationsStmt->fetchAll();
                             case 'wishlist':
                                 echo 'My Wishlist';
                                 break;
+                            case 'offers':
+                                echo 'Special Offers';
+                                break;
                             case 'notifications':
                                 echo 'Notifications';
                                 break;
@@ -534,6 +613,8 @@ $notifications = $notificationsStmt->fetchAll();
                         <span><?= $bookingsCount ?> Bookings</span>
                         <span>•</span>
                         <span><?= $wishlistCount ?> Wishlist</span>
+                        <span>•</span>
+                        <span><?= $availableOffersCount ?> Offers</span>
                         <span>•</span>
                         <span><?= $unreadNotifications ?> Unread</span>
                     </div>
@@ -629,11 +710,11 @@ $notifications = $notificationsStmt->fetchAll();
                         <div class="card-dark p-6 rounded-xl shadow-sm">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-gray-300">Unread Notifications</p>
-                                    <h3 class="text-2xl font-bold text-white"><?= $unreadNotifications ?></h3>
+                                    <p class="text-gray-300">Available Offers</p>
+                                    <h3 class="text-2xl font-bold text-white"><?= $availableOffersCount ?></h3>
                                 </div>
                                 <div class="p-3 rounded-full bg-yellow-900 text-yellow-300">
-                                    <i data-feather="bell"></i>
+                                    <i data-feather="gift"></i>
                                 </div>
                             </div>
                         </div>
@@ -651,13 +732,13 @@ $notifications = $notificationsStmt->fetchAll();
                                 <i data-feather="heart" class="w-8 h-8 text-green-300 mx-auto mb-2"></i>
                                 <span class="font-medium text-white">My Wishlist</span>
                             </a>
-                            <a href="dashboard.php?view=profile" class="bg-purple-900 hover:bg-purple-800 p-4 rounded-lg text-center transition-colors">
-                                <i data-feather="user" class="w-8 h-8 text-purple-300 mx-auto mb-2"></i>
-                                <span class="font-medium text-white">My Profile</span>
+                            <a href="dashboard.php?view=offers" class="bg-purple-900 hover:bg-purple-800 p-4 rounded-lg text-center transition-colors">
+                                <i data-feather="gift" class="w-8 h-8 text-purple-300 mx-auto mb-2"></i>
+                                <span class="font-medium text-white">Special Offers</span>
                             </a>
-                            <a href="dashboard.php?view=security" class="bg-orange-900 hover:bg-orange-800 p-4 rounded-lg text-center transition-colors">
-                                <i data-feather="shield" class="w-8 h-8 text-orange-300 mx-auto mb-2"></i>
-                                <span class="font-medium text-white">Security</span>
+                            <a href="dashboard.php?view=profile" class="bg-indigo-900 hover:bg-indigo-800 p-4 rounded-lg text-center transition-colors">
+                                <i data-feather="user" class="w-8 h-8 text-indigo-300 mx-auto mb-2"></i>
+                                <span class="font-medium text-white">My Profile</span>
                             </a>
                         </div>
                     </div>
@@ -692,23 +773,30 @@ $notifications = $notificationsStmt->fetchAll();
                             <?php endif; ?>
                         </div>
 
-                        <!-- Recent Notifications -->
+                        <!-- Available Offers Preview -->
                         <div class="card-dark p-6 rounded-xl shadow-sm">
-                            <h2 class="text-xl font-bold text-white mb-4">Recent Notifications</h2>
-                            <?php if (empty($notifications)): ?>
-                                <p class="text-gray-400 text-center py-4">No notifications</p>
+                            <h2 class="text-xl font-bold text-white mb-4">Available Offers</h2>
+                            <?php if (empty($userOffers)): ?>
+                                <p class="text-gray-400 text-center py-4">No active offers available.</p>
                             <?php else: ?>
                                 <div class="space-y-3">
-                                    <?php foreach (array_slice($notifications, 0, 3) as $notification): ?>
-                                        <div class="p-3 bg-gray-800 rounded-lg border-l-2 <?= $notification['is_read'] ? 'border-gray-600' : 'border-yellow-500' ?>">
-                                            <p class="text-sm text-white"><?= htmlspecialchars($notification['title']) ?></p>
-                                            <p class="text-xs text-gray-400 mt-1"><?= date('M j, g:i A', strtotime($notification['created_at'])) ?></p>
+                                    <?php foreach (array_slice($userOffers, 0, 2) as $offer): ?>
+                                        <div class="p-3 bg-gray-800 rounded-lg border-l-4 border-yellow-500">
+                                            <div class="flex justify-between items-center">
+                                                <div>
+                                                    <h3 class="font-semibold text-white"><?= htmlspecialchars($offer['description']) ?></h3>
+                                                    <p class="text-sm text-yellow-400">Code: <?= htmlspecialchars($offer['code']) ?></p>
+                                                </div>
+                                                <span class="px-2 py-1 bg-yellow-500 text-blue-900 rounded text-xs font-bold">
+                                                    <?= $offer['discount_percent'] ?>% OFF
+                                                </span>
+                                            </div>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
-                                <?php if (count($notifications) > 3): ?>
+                                <?php if (count($userOffers) > 2): ?>
                                     <div class="mt-4 text-center">
-                                        <a href="dashboard.php?view=notifications" class="text-blue-400 hover:text-blue-300 text-sm">View all notifications</a>
+                                        <a href="dashboard.php?view=offers" class="text-blue-400 hover:text-blue-300 text-sm">View all offers</a>
                                     </div>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -1158,6 +1246,142 @@ $notifications = $notificationsStmt->fetchAll();
                         </div>
                     </div>
 
+                <?php elseif ($current_view === 'offers'): ?>
+                    <!-- SPECIAL OFFERS VIEW -->
+                    <div class="w-full">
+                        <div class="card-dark p-6 rounded-xl shadow-sm">
+                            <h2 class="text-2xl font-bold text-white mb-6">Special Offers</h2>
+
+                            <?php if (empty($userOffers)): ?>
+                                <div class="text-center py-8">
+                                    <i data-feather="gift" class="w-16 h-16 text-gray-500 mx-auto mb-4"></i>
+                                    <h3 class="text-xl font-semibold text-gray-400 mb-2">No active offers available</h3>
+                                    <p class="text-gray-500">Check back later for new promotions and discounts!</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="space-y-6">
+                                    <?php foreach ($userOffers as $offer): ?>
+                                        <div class="offer-card bg-gray-800 rounded-lg p-6 transition-all duration-300" id="offer-<?= $offer['id'] ?>">
+                                            <div class="flex justify-between items-start mb-4">
+                                                <div class="flex items-center space-x-4">
+                                                    <div class="offer-badge px-3 py-1 rounded-full text-sm font-bold">
+                                                        <?= $offer['discount_percent'] ?>% OFF
+                                                    </div>
+                                                    <h3 class="text-lg font-semibold text-white"><?= htmlspecialchars($offer['description']) ?></h3>
+                                                </div>
+                                                <button type="button" onclick="toggleOfferDetails(<?= $offer['id'] ?>)" 
+                                                    class="text-gray-400 hover:text-white transition-colors">
+                                                    <i data-feather="chevron-down" class="w-5 h-5" id="offer-icon-<?= $offer['id'] ?>"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="offer-details hidden mt-4 space-y-4" id="offer-details-<?= $offer['id'] ?>">
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                                    <div>
+                                                        <p class="text-gray-400">Offer Code</p>
+                                                        <p class="text-white font-mono font-bold text-lg"><?= htmlspecialchars($offer['code']) ?></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-gray-400">Discount</p>
+                                                        <p class="text-yellow-400 font-semibold"><?= $offer['discount_percent'] ?>% OFF</p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-gray-400">Minimum Amount</p>
+                                                        <p class="text-white">HKD $<?= number_format($offer['minimum_amount'], 2) ?></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-gray-400">Maximum Discount</p>
+                                                        <p class="text-white">HKD $<?= number_format($offer['max_discount'], 2) ?></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-gray-400">Valid Until</p>
+                                                        <p class="text-white"><?= date('M j, Y', strtotime($offer['valid_until'])) ?></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-gray-400">Status</p>
+                                                        <p class="text-green-400 font-semibold">Available</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="bg-yellow-900 border border-yellow-700 text-yellow-200 p-4 rounded">
+                                                    <div class="flex items-start">
+                                                        <i data-feather="info" class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0"></i>
+                                                        <div>
+                                                            <p class="font-semibold">How to use this offer:</p>
+                                                            <p class="text-sm mt-1">
+                                                                Use code <strong><?= htmlspecialchars($offer['code']) ?></strong> during checkout on your next flight booking. 
+                                                                The discount will be automatically applied to your total amount.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex space-x-4 pt-4 border-t border-gray-700">
+                                                    <form method="POST" class="flex-1">
+                                                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                                        <input type="hidden" name="action" value="claim_offer">
+                                                        <input type="hidden" name="offer_id" value="<?= $offer['id'] ?>">
+                                                        <button type="submit" 
+                                                            class="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
+                                                            <i data-feather="check" class="w-4 h-4 mr-2"></i>
+                                                            Claim This Offer
+                                                        </button>
+                                                    </form>
+                                                    <a href="index.php" 
+                                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
+                                                        <i data-feather="shopping-cart" class="w-4 h-4 mr-2"></i>
+                                                        Book Now
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Used Offers Section -->
+                            <?php
+                            // Get used offers
+                            $usedOffersStmt = $pdo->prepare("
+                                SELECT uo.*, c.code, c.description, c.discount_type, c.discount_value,
+                                       b.booking_reference, b.total_amount, uo.used_at
+                                FROM user_offers uo 
+                                JOIN coupons c ON uo.offer_code = c.code 
+                                LEFT JOIN bookings b ON uo.booking_id = b.id
+                                WHERE uo.user_id = ? AND uo.is_used = 1
+                                ORDER BY uo.used_at DESC
+                            ");
+                            $usedOffersStmt->execute([$_SESSION['user_id']]);
+                            $usedOffers = $usedOffersStmt->fetchAll();
+                            ?>
+
+                            <?php if (!empty($usedOffers)): ?>
+                                <div class="mt-12">
+                                    <h3 class="text-xl font-bold text-white mb-6">Used Offers</h3>
+                                    <div class="space-y-4">
+                                        <?php foreach ($usedOffers as $usedOffer): ?>
+                                            <div class="bg-gray-800 rounded-lg p-6 border-l-4 border-green-500 opacity-75">
+                                                <div class="flex justify-between items-center">
+                                                    <div>
+                                                        <h4 class="font-semibold text-white"><?= htmlspecialchars($usedOffer['description']) ?></h4>
+                                                        <p class="text-sm text-gray-400">Code: <?= htmlspecialchars($usedOffer['code']) ?></p>
+                                                        <?php if ($usedOffer['booking_reference']): ?>
+                                                            <p class="text-sm text-green-400">Used on Booking #<?= htmlspecialchars($usedOffer['booking_reference']) ?></p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <p class="text-green-400 font-semibold">Used</p>
+                                                        <p class="text-xs text-gray-400"><?= date('M j, Y', strtotime($usedOffer['used_at'])) ?></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                 <?php elseif ($current_view === 'notifications'): ?>
                     <!-- NOTIFICATIONS VIEW -->
                     <div class="w-full">
@@ -1308,6 +1532,24 @@ $notifications = $notificationsStmt->fetchAll();
                 // You could add logic to close modals here if needed
             }
         });
+
+        // Offer details toggle functionality
+        function toggleOfferDetails(offerId) {
+            const details = document.getElementById('offer-details-' + offerId);
+            const icon = document.getElementById('offer-icon-' + offerId);
+            const card = document.getElementById('offer-' + offerId);
+            
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                icon.setAttribute('data-feather', 'chevron-up');
+                card.classList.add('expanded');
+            } else {
+                details.classList.add('hidden');
+                icon.setAttribute('data-feather', 'chevron-down');
+                card.classList.remove('expanded');
+            }
+            feather.replace();
+        }
 
         // Avatar upload functionality
         let currentAvatarFile = null;

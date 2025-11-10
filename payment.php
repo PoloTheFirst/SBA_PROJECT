@@ -131,7 +131,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: payment.php?step=5&error=payment_failed");
             exit();
         }
+    } elseif ($action === 'apply_coupon') {
+        // Handle coupon application
+        $coupon_code = $_POST['coupon_code'] ?? '';
+        $coupon_result = applyCoupon($coupon_code);
+        
+        if ($coupon_result['success']) {
+            $_SESSION['payment_data']['applied_coupon'] = $coupon_result['coupon'];
+            $_SESSION['payment_data']['discount_amount'] = $coupon_result['discount_amount'];
+            $_SESSION['success'] = "Coupon applied successfully! Discount: HKD $" . number_format($coupon_result['discount_amount'], 2);
+        } else {
+            $_SESSION['error'] = $coupon_result['message'];
+        }
+        
+        header("Location: payment.php?step=5");
+        exit();
+    } elseif ($action === 'remove_coupon') {
+        // Remove applied coupon
+        unset($_SESSION['payment_data']['applied_coupon']);
+        unset($_SESSION['payment_data']['discount_amount']);
+        $_SESSION['success'] = "Coupon removed successfully.";
+        
+        header("Location: payment.php?step=5");
+        exit();
     }
+}
+
+function applyCoupon($coupon_code) {
+    global $pdo;
+    
+    // Validate coupon code
+    if (empty($coupon_code)) {
+        return ['success' => false, 'message' => 'Please enter a coupon code.'];
+    }
+    
+    // Check if user has already used this coupon
+    $used_coupon_stmt = $pdo->prepare("
+        SELECT * FROM user_coupons 
+        WHERE user_id = ? AND coupon_id IN (SELECT id FROM coupons WHERE code = ?)
+    ");
+    $used_coupon_stmt->execute([$_SESSION['user_id'], $coupon_code]);
+    
+    if ($used_coupon_stmt->fetch()) {
+        return ['success' => false, 'message' => 'This coupon has already been used.'];
+    }
+    
+    // Get coupon details
+    $coupon_stmt = $pdo->prepare("
+        SELECT * FROM coupons 
+        WHERE code = ? AND is_active = 1 AND valid_from <= NOW() AND valid_until >= NOW()
+    ");
+    $coupon_stmt->execute([$coupon_code]);
+    $coupon = $coupon_stmt->fetch();
+    
+    if (!$coupon) {
+        return ['success' => false, 'message' => 'Invalid or expired coupon code.'];
+    }
+    
+    // Check if user is eligible (for new user coupons)
+    if ($coupon['for_new_users']) {
+        $user_bookings_stmt = $pdo->prepare("SELECT COUNT(*) as booking_count FROM bookings WHERE user_id = ?");
+        $user_bookings_stmt->execute([$_SESSION['user_id']]);
+        $user_bookings = $user_bookings_stmt->fetch();
+        
+        if ($user_bookings['booking_count'] > 0) {
+            return ['success' => false, 'message' => 'This coupon is only for new users.'];
+        }
+    }
+    
+    // Check minimum amount requirement
+    $base_amount = $_SESSION['payment_data']['base_amount'] ?? 0;
+    if ($base_amount < $coupon['min_amount']) {
+        return ['success' => false, 'message' => 'Minimum amount requirement not met for this coupon.'];
+    }
+    
+    // Calculate discount amount
+    $discount_amount = 0;
+    if ($coupon['discount_type'] === 'percentage') {
+        $discount_amount = $base_amount * ($coupon['discount_value'] / 100);
+        // Apply maximum discount limit if set
+        if ($coupon['max_discount'] && $discount_amount > $coupon['max_discount']) {
+            $discount_amount = $coupon['max_discount'];
+        }
+    } else {
+        $discount_amount = $coupon['discount_value'];
+    }
+    
+    return [
+        'success' => true,
+        'coupon' => $coupon,
+        'discount_amount' => $discount_amount
+    ];
 }
 
 function processPayment()
@@ -151,6 +241,15 @@ function processPayment()
         // Generate booking reference
         $booking_ref = 'TG' . strtoupper(bin2hex(random_bytes(5)));
 
+        // Calculate final total including seat charges and discount
+        $base_amount = $_SESSION['payment_data']['base_amount'] ?? 0;
+        $tax_amount = $_SESSION['payment_data']['tax_amount'] ?? 0;
+        $seat_charges = $_SESSION['payment_data']['seat_charges'] ?? 0;
+        $discount_amount = $_SESSION['payment_data']['discount_amount'] ?? 0;
+        
+        $final_total = ($base_amount + $tax_amount + $seat_charges) - $discount_amount;
+        if ($final_total < 0) $final_total = 0; // Ensure total doesn't go negative
+
         // Create booking record
         $stmt = $pdo->prepare("
             INSERT INTO bookings (user_id, booking_reference, flight_type, flight_id, flight_details, passenger_info, billing_address, payment_method, total_amount, status) 
@@ -159,7 +258,7 @@ function processPayment()
 
         $user_id = $_SESSION['user_id'] ?? null;
 
-        // Prepare flight details with seat information
+        // Prepare flight details with seat information and coupon
         $flight_details_json = json_encode([
             'flight_id' => $_SESSION['payment_data']['flight_id'],
             'flight_type' => $_SESSION['payment_data']['flight_type'],
@@ -169,6 +268,8 @@ function processPayment()
             'seat_charges' => $_SESSION['payment_data']['seat_charges'] ?? 0,
             'base_amount' => $_SESSION['payment_data']['base_amount'] ?? 0,
             'tax_amount' => $_SESSION['payment_data']['tax_amount'] ?? 0,
+            'applied_coupon' => $_SESSION['payment_data']['applied_coupon'] ?? null,
+            'discount_amount' => $_SESSION['payment_data']['discount_amount'] ?? 0,
             'duration' => $_SESSION['payment_data']['flight_details']['duration'] ?? '',
             'return_duration' => $_SESSION['payment_data']['flight_details']['return_duration'] ?? ''
         ], JSON_UNESCAPED_UNICODE);
@@ -176,13 +277,11 @@ function processPayment()
         $passenger_info_json = json_encode($_SESSION['payment_data']['passenger_info'] ?? [], JSON_UNESCAPED_UNICODE);
         $billing_address_json = json_encode($_SESSION['payment_data']['billing_address'] ?? [], JSON_UNESCAPED_UNICODE);
 
-        // Calculate final total including seat charges
-        $final_total = ($_SESSION['payment_data']['total_amount'] ?? 0) + ($_SESSION['payment_data']['seat_charges'] ?? 0);
-
         // Debug logging
         error_log("Processing payment for user: $user_id");
         error_log("Booking reference: $booking_ref");
         error_log("Final total: $final_total");
+        error_log("Discount applied: $discount_amount");
 
         $stmt->execute([
             $user_id,
@@ -214,6 +313,21 @@ function processPayment()
         ]);
 
         error_log("Transaction created: $transaction_id");
+
+        // Record coupon usage if applied
+        if (isset($_SESSION['payment_data']['applied_coupon'])) {
+            $coupon = $_SESSION['payment_data']['applied_coupon'];
+            $coupon_usage_stmt = $pdo->prepare("
+                INSERT INTO user_coupons (user_id, coupon_id, booking_id, used_at) 
+                VALUES (?, ?, ?, NOW())
+            ");
+            $coupon_usage_stmt->execute([
+                $_SESSION['user_id'],
+                $coupon['id'],
+                $booking_id
+            ]);
+            error_log("Coupon usage recorded for coupon ID: " . $coupon['id']);
+        }
 
         // Update flight seats (for round trip flights)
         if ($_SESSION['payment_data']['flight_type'] === 'round_trip' && isset($_SESSION['payment_data']['flight_id'])) {
@@ -256,7 +370,9 @@ function processPayment()
             'booking_date' => date('Y-m-d H:i:s'),
             'base_amount' => $_SESSION['payment_data']['base_amount'] ?? 0,
             'tax_amount' => $_SESSION['payment_data']['tax_amount'] ?? 0,
-            'seat_charges' => $_SESSION['payment_data']['seat_charges'] ?? 0
+            'seat_charges' => $_SESSION['payment_data']['seat_charges'] ?? 0,
+            'applied_coupon' => $_SESSION['payment_data']['applied_coupon'] ?? null,
+            'discount_amount' => $_SESSION['payment_data']['discount_amount'] ?? 0
         ];
 
         error_log("Payment processed successfully, ready for receipt step");
@@ -297,7 +413,9 @@ function displayIntegratedReceipt() {
             'selected_seats' => $paymentData['selected_seats'] ?? [],
             'base_amount' => $paymentData['base_amount'] ?? 0,
             'tax_amount' => $paymentData['tax_amount'] ?? 0,
-            'seat_charges' => $paymentData['seat_charges'] ?? 0
+            'seat_charges' => $paymentData['seat_charges'] ?? 0,
+            'applied_coupon' => $paymentData['applied_coupon'] ?? null,
+            'discount_amount' => $paymentData['discount_amount'] ?? 0
         ];
     }
     
@@ -400,6 +518,23 @@ function displayIntegratedReceipt() {
         </div>
         <?php endif; ?>
 
+        <!-- Applied Coupon -->
+        <?php if (isset($bookingSummary['applied_coupon'])): ?>
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
+            <h3 class="font-semibold mb-2 text-green-800">Applied Coupon</h3>
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-green-700 font-semibold"><?= htmlspecialchars($bookingSummary['applied_coupon']['code']) ?></p>
+                    <p class="text-green-600 text-sm"><?= htmlspecialchars($bookingSummary['applied_coupon']['description']) ?></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-green-700 font-bold">-HKD $<?= number_format($bookingSummary['discount_amount'], 2) ?></p>
+                    <p class="text-green-600 text-sm">Discount Applied</p>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Payment Summary -->
         <div class="bg-gray-50 p-4 rounded mb-6">
             <h3 class="font-semibold mb-2">Payment Summary</h3>
@@ -418,6 +553,12 @@ function displayIntegratedReceipt() {
                 <div class="flex justify-between">
                     <span>Seat Selection Charges:</span>
                     <span>HKD $<?= number_format($bookingSummary['seat_charges'] ?? 0, 2) ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if (($bookingSummary['discount_amount'] ?? 0) > 0): ?>
+                <div class="flex justify-between text-green-600">
+                    <span>Coupon Discount:</span>
+                    <span>-HKD $<?= number_format($bookingSummary['discount_amount'] ?? 0, 2) ?></span>
                 </div>
                 <?php endif; ?>
                 <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
@@ -638,6 +779,68 @@ $seat_map = generateSeatMap();
             color: #1f2937;
         }
 
+        /* Coupon Styles */
+        .coupon-section {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .coupon-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .coupon-input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .coupon-btn {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .coupon-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .coupon-btn.remove {
+            background: #dc2626;
+        }
+
+        .coupon-btn.remove:hover {
+            background: #b91c1c;
+        }
+
+        .applied-coupon {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .coupon-error {
+            background: #ef4444;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
         @media print {
             .no-print {
                 display: none !important;
@@ -711,6 +914,21 @@ $seat_map = generateSeatMap();
             <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4 no-print">
                 <?= $_SESSION['payment_error'] ?>
                 <?php unset($_SESSION['payment_error']); ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Success/Error Messages -->
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded mb-4 no-print">
+                <?= $_SESSION['success'] ?>
+                <?php unset($_SESSION['success']); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4 no-print">
+                <?= $_SESSION['error'] ?>
+                <?php unset($_SESSION['error']); ?>
             </div>
         <?php endif; ?>
 
@@ -1063,6 +1281,48 @@ $seat_map = generateSeatMap();
                         <!-- Step 5: Confirmation -->
                         <h2 class="text-2xl font-bold mb-6">Confirm Your Booking</h2>
                         <div class="space-y-6">
+                            <!-- Coupon Section -->
+                            <div class="coupon-section">
+                                <h3 class="text-xl font-bold text-blue-900 mb-4">Apply Coupon Code</h3>
+                                
+                                <?php if (isset($_SESSION['payment_data']['applied_coupon'])): 
+                                    $applied_coupon = $_SESSION['payment_data']['applied_coupon'];
+                                    $discount_amount = $_SESSION['payment_data']['discount_amount'] ?? 0;
+                                ?>
+                                    <div class="applied-coupon">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <h4 class="font-bold">Coupon Applied</h4>
+                                                <p class="text-sm"><?= htmlspecialchars($applied_coupon['description']) ?></p>
+                                                <p class="text-sm font-mono">Code: <?= htmlspecialchars($applied_coupon['code']) ?></p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="font-bold text-lg">-HKD $<?= number_format($discount_amount, 2) ?></p>
+                                                <form method="POST" class="inline">
+                                                    <input type="hidden" name="action" value="remove_coupon">
+                                                    <button type="submit" class="coupon-btn remove text-sm mt-2">
+                                                        Remove
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <form method="POST" class="coupon-input-group">
+                                        <input type="hidden" name="action" value="apply_coupon">
+                                        <input type="text" name="coupon_code" class="coupon-input" 
+                                               placeholder="Enter coupon code (e.g., WELCOME15)" 
+                                               value="<?= htmlspecialchars($_POST['coupon_code'] ?? '') ?>"
+                                               required>
+                                        <button type="submit" class="coupon-btn">Apply Coupon</button>
+                                    </form>
+                                    <p class="text-blue-900 text-sm">
+                                        <i data-feather="info" class="w-4 h-4 inline mr-1"></i>
+                                        New users can use code <strong>WELCOME15</strong> for 15% off first flight!
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+
                             <!-- Flight Summary -->
                             <?php if (isset($_SESSION['payment_data']['flight_details'])):
                                 $flight = $_SESSION['payment_data']['flight_details'];
@@ -1182,9 +1442,19 @@ $seat_map = generateSeatMap();
                                             <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?></span>
                                         </div>
                                     <?php endif; ?>
+                                    <?php if (isset($_SESSION['payment_data']['discount_amount']) && $_SESSION['payment_data']['discount_amount'] > 0): ?>
+                                        <div class="flex justify-between text-green-400">
+                                            <span class="text-gray-300">Coupon Discount:</span>
+                                            <span class="font-semibold">-HKD $<?= number_format($_SESSION['payment_data']['discount_amount'] ?? 0, 2) ?></span>
+                                        </div>
+                                    <?php endif; ?>
                                     <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
+                                        <?php
+                                        $final_total = (($_SESSION['payment_data']['base_amount'] ?? 0) + ($_SESSION['payment_data']['tax_amount'] ?? 0) + ($_SESSION['payment_data']['seat_charges'] ?? 0)) - ($_SESSION['payment_data']['discount_amount'] ?? 0);
+                                        if ($final_total < 0) $final_total = 0;
+                                        ?>
                                         <span class="text-white">Total Amount:</span>
-                                        <span class="text-yellow-400">HKD $<?= number_format(($_SESSION['payment_data']['total_amount'] ?? 0) + ($_SESSION['payment_data']['seat_charges'] ?? 0), 2) ?></span>
+                                        <span class="text-yellow-400">HKD $<?= number_format($final_total, 2) ?></span>
                                     </div>
                                 </div>
                             </div>
