@@ -787,7 +787,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     returnInput.required = false;
                     returnInput.value = '';
                     alert('Multi-city search coming soon!');
-                    document.getElementById('search-form').action = 'search_results.php';
+                    document.getElementById('search-form').action = 'content_page/underdevelop.php';
                 }
             }
 
