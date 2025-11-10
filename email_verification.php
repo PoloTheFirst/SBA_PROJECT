@@ -1,4 +1,5 @@
 [file name]: email_verification.php
+[file content begin]
 <?php
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
