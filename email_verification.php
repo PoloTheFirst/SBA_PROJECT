@@ -4,22 +4,6 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require 'connection.php';
 
-// Debug: Check if PHPMailer files exist
-echo "Checking PHPMailer files:<br>";
-$files = [
-    'PHPMailer/src/Exception.php',
-    'PHPMailer/src/PHPMailer.php', 
-    'PHPMailer/src/SMTP.php'
-];
-
-foreach ($files as $file) {
-    if (file_exists($file)) {
-        echo "✓ $file exists<br>";
-    } else {
-        echo "✗ $file MISSING<br>";
-    }
-}
-
 // Include PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -103,18 +87,12 @@ function sendVerificationEmail($toEmail, $userName, $token) {
     $mail = new PHPMailer(true);
 
     try {
-        // Enable verbose debugging
-        $mail->SMTPDebug = 2;
-        $mail->Debugoutput = function($str, $level) {
-            file_put_contents('smtp_debug.log', date('Y-m-d H:i:s') . " [{$level}]: {$str}\n", FILE_APPEND | LOCK_EX);
-        };
-
         // Server settings
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
         $mail->Username = 'travelgo.orbits@gmail.com';
-        $mail->Password = 'upgrgcmgjicyokux'; // ← Replace with new app password
+        $mail->Password = 'upgrgcmgjicyokux'; 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
         
@@ -138,45 +116,111 @@ function sendVerificationEmail($toEmail, $userName, $token) {
         $mail->Subject = 'Verify Your Email - TravelGO Orbit';
         
         // Create verification URL
-        $verificationUrl = "http://" . $_SERVER['HTTP_HOST'] . "/verify_email.php?token=" . $token;
+        $verificationUrl = "http://" . $_SERVER['HTTP_HOST'] . "/SBA_PROJECT/verify_email.php?token=" . $token;
         
-        // Email content (your existing HTML template)
+        // Updated email content with website color scheme
         $mail->Body = "
         <!DOCTYPE html>
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #f59e0b, #1e3a8a); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                .button { background: #f59e0b; color: #1e3a8a; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
-                .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+                body { 
+                    font-family: 'Poppins', sans-serif; 
+                    background-color: #111827; 
+                    color: #ffffff; 
+                    margin: 0; 
+                    padding: 0; 
+                }
+                .container { 
+                    max-width: 600px; 
+                    margin: 0 auto; 
+                    background: rgba(255, 255, 255, 0.1); 
+                    backdrop-filter: blur(10px); 
+                    border: 1px solid rgba(255, 255, 255, 0.2); 
+                    border-radius: 10px;
+                    overflow: hidden;
+                }
+                .header { 
+                    background: linear-gradient(135deg, #f59e0b, #1e3a8a); 
+                    color: white; 
+                    padding: 30px; 
+                    text-align: center; 
+                }
+                .logo {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    margin-bottom: 15px;
+                    font-size: 24px;
+                    font-weight: bold;
+                }
+                .content { 
+                    background: #1f2937; 
+                    padding: 40px; 
+                }
+                .button { 
+                    background: #f59e0b; 
+                    color: #1e3a8a; 
+                    padding: 15px 35px; 
+                    text-decoration: none; 
+                    border-radius: 8px; 
+                    font-weight: bold; 
+                    display: inline-block;
+                    font-size: 16px;
+                    transition: all 0.3s ease;
+                }
+                .button:hover {
+                    background: #d97706;
+                    transform: translateY(-2px);
+                }
+                .footer { 
+                    text-align: center; 
+                    margin-top: 30px; 
+                    font-size: 12px; 
+                    color: #9ca3af; 
+                    padding: 20px;
+                    border-top: 1px solid #374151;
+                }
+                .verification-link {
+                    background: #374151;
+                    padding: 15px;
+                    border-radius: 5px;
+                    word-break: break-all;
+                    margin: 20px 0;
+                    font-family: monospace;
+                    color: #f59e0b;
+                }
             </style>
         </head>
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h1>TravelGO Orbit</h1>
-                    <h2>Email Verification</h2>
+                    <div class='logo'>
+                        <span style='color: #f59e0b;'>✈</span>
+                        <span>TravelGO Orbit</span>
+                    </div>
+                    <h2>Email Verification Required</h2>
                 </div>
                 <div class='content'>
-                    <h3>Hello " . htmlspecialchars($userName) . ",</h3>
-                    <p>Thank you for registering with TravelGO Orbit! To complete your account setup and access all features, please verify your email address by clicking the button below:</p>
+                    <h3 style='color: #f59e0b; margin-bottom: 20px;'>Hello " . htmlspecialchars($userName) . ",</h3>
+                    <p style='line-height: 1.6; margin-bottom: 25px;'>Thank you for registering with TravelGO Orbit! To complete your account setup and access all features, please verify your email address by clicking the button below:</p>
                     
-                    <div style='text-align: center; margin: 30px 0;'>
+                    <div style='text-align: center; margin: 35px 0;'>
                         <a href='" . $verificationUrl . "' class='button'>Verify Email Address</a>
                     </div>
                     
-                    <p>Or copy and paste this link in your browser:</p>
-                    <p style='word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;'>" . $verificationUrl . "</p>
+                    <p style='margin-bottom: 10px;'>Or copy and paste this link in your browser:</p>
+                    <div class='verification-link'>" . $verificationUrl . "</div>
                     
-                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    <p style='color: #f59e0b; font-weight: bold; margin: 25px 0;'>This link will expire in 24 hours.</p>
                     
-                    <p>If you didn't create an account with TravelGO Orbit, please ignore this email.</p>
+                    <p style='color: #9ca3af; font-size: 14px;'>If you didn't create an account with TravelGO Orbit, please ignore this email.</p>
                 </div>
                 <div class='footer'>
                     <p>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
+                    <p style='margin-top: 10px;'>Travel Street, Hong Kong SAR</p>
                 </div>
             </div>
         </body>
@@ -187,15 +231,10 @@ function sendVerificationEmail($toEmail, $userName, $token) {
         $mail->AltBody = "Hello " . $userName . ",\n\nPlease verify your email address by visiting this link: " . $verificationUrl . "\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account with TravelGO Orbit, please ignore this email.";
 
         $mail->send();
-        
-        // Log success
-        error_log("Email sent successfully to: " . $toEmail);
         return true;
         
     } catch (Exception $e) {
-        // Log detailed error
-        error_log("PHPMailer Error: " . $e->getMessage());
-        error_log("SMTP Debug: " . $mail->ErrorInfo);
+        error_log("PHPMailer Error: " . $mail->ErrorInfo);
         return false;
     }
 }
