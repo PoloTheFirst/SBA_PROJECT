@@ -155,18 +155,9 @@ function sendVerificationEmail($toEmail, $userName, $token) {
                 }
                 
                 .logo {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 12px;
                     margin-bottom: 20px;
                     font-size: 28px;
                     font-weight: bold;
-                }
-                
-                .logo-icon {
-                    font-size: 32px;
-                    color: #f59e0b;
                 }
                 
                 .content { 
@@ -241,6 +232,12 @@ function sendVerificationEmail($toEmail, $userName, $token) {
                     min-width: 24px;
                 }
                 
+                .verification-url {
+                    color: #93c5fd;
+                    text-decoration: underline;
+                    word-break: break-all;
+                }
+                
                 @media only screen and (max-width: 600px) {
                     .container {
                         margin: 10px;
@@ -264,10 +261,7 @@ function sendVerificationEmail($toEmail, $userName, $token) {
         <body>
             <div class='container'>
                 <div class='header'>
-                    <div class='logo'>
-                        <span class='logo-icon'>✈</span>
-                        <span>TravelGO Orbit</span>
-                    </div>
+                    <div class='logo'>TravelGO Orbit</div>
                     <h1 style='margin: 0; font-size: 28px; font-weight: 600;'>Email Verification Required</h1>
                     <p style='margin: 10px 0 0 0; opacity: 0.9;'>Complete your account activation</p>
                 </div>
@@ -276,7 +270,7 @@ function sendVerificationEmail($toEmail, $userName, $token) {
                     <h2 style='color: #f59e0b; margin-bottom: 20px; font-size: 22px;'>Hello " . htmlspecialchars($userName) . ",</h2>
                     
                     <p style='line-height: 1.6; margin-bottom: 25px; color: #d1d5db;'>
-                        Thank you for registering with <strong>TravelGO Orbit</strong>! To complete your account setup 
+                        Thank you for registering with <strong style='color: #ffffff;'>TravelGO Orbit</strong>! To complete your account setup 
                         and access all features, please verify your email address by clicking the button below:
                     </p>
                     
@@ -290,20 +284,22 @@ function sendVerificationEmail($toEmail, $userName, $token) {
                         <h3 style='color: #93c5fd; margin-top: 0; font-size: 16px;'>What happens next?</h3>
                         <div class='step-item'>
                             <span class='step-icon'>✓</span>
-                            <span>Click the verification link in your email</span>
+                            <span style='color: #d1d5db;'>Click the verification link in your email</span>
                         </div>
                         <div class='step-item'>
                             <span class='step-icon'>✓</span>
-                            <span>Your account will be fully activated</span>
+                            <span style='color: #d1d5db;'>Your account will be fully activated</span>
                         </div>
                         <div class='step-item'>
                             <span class='step-icon'>✓</span>
-                            <span>Start exploring and booking your travels</span>
+                            <span style='color: #d1d5db;'>Start exploring and booking your travels</span>
                         </div>
                     </div>
                     
                     <p style='margin-bottom: 10px; color: #d1d5db;'>Or copy and paste this link in your browser:</p>
-                    <div class='verification-link'>" . $verificationUrl . "</div>
+                    <div class='verification-link'>
+                        <a href='" . $verificationUrl . "' class='verification-url'>" . $verificationUrl . "</a>
+                    </div>
                     
                     <div style='background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 25px 0;'>
                         <p style='color: #f59e0b; font-weight: bold; margin: 0; text-align: center;'>
@@ -318,7 +314,7 @@ function sendVerificationEmail($toEmail, $userName, $token) {
                 </div>
                 
                 <div class='footer'>
-                    <p style='margin: 0 0 10px 0;'>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
+                    <p style='margin: 0 0 10px 0; color: #9ca3af;'>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
                     <p style='margin: 5px 0; color: #6b7280;'>Travel Street, Hong Kong SAR</p>
                     <p style='margin: 5px 0; color: #6b7280; font-size: 11px;'>
                         This is an automated message. Please do not reply to this email.
