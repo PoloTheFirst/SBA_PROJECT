@@ -4,6 +4,15 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require 'connection.php';
 
+// Include PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Manual includes (if not using Composer)
+require 'PHPMailer/src/Exception.php';
+require 'PHPMailer/src/PHPMailer.php';
+require 'PHPMailer/src/SMTP.php';
+
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -57,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)");
             $stmt->execute([$_SESSION['user_id'], $token, $expires_at]);
             
-            // Send verification email
+            // Send verification email using PHPMailer
             if (sendVerificationEmail($user['email'], $user['name'], $token)) {
                 $_SESSION['success'] = "Verification email sent successfully! Please check your inbox.";
                 header("Location: dashboard.php");
@@ -73,116 +82,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /**
- * Send verification email using PHP's mail() function
- * For localhost with XAMPP, you'll need to configure SMTP in php.ini
+ * Send verification email using PHPMailer
  */
 function sendVerificationEmail($toEmail, $userName, $token) {
-    $subject = "Verify Your Email - TravelGO Orbit";
-    
-    // Create verification URL
-    $verificationUrl = "http://" . $_SERVER['HTTP_HOST'] . "/verify_email.php?token=" . $token;
-    
-    // Email content
-    $message = "
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #f59e0b, #1e3a8a); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { background: #f59e0b; color: #1e3a8a; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
-            .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
-        </style>
-    </head>
-    <body>
-        <div class='container'>
-            <div class='header'>
-                <h1>TravelGO Orbit</h1>
-                <h2>Email Verification</h2>
-            </div>
-            <div class='content'>
-                <h3>Hello " . htmlspecialchars($userName) . ",</h3>
-                <p>Thank you for registering with TravelGO Orbit! To complete your account setup and access all features, please verify your email address by clicking the button below:</p>
-                
-                <div style='text-align: center; margin: 30px 0;'>
-                    <a href='" . $verificationUrl . "' class='button'>Verify Email Address</a>
-                </div>
-                
-                <p>Or copy and paste this link in your browser:</p>
-                <p style='word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;'>" . $verificationUrl . "</p>
-                
-                <p><strong>This link will expire in 24 hours.</strong></p>
-                
-                <p>If you didn't create an account with TravelGO Orbit, please ignore this email.</p>
-            </div>
-            <div class='footer'>
-                <p>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    ";
-    
-    // Email headers
-    $headers = "MIME-Version: 1.0" . "\r\n";
-    $headers .= "Content-type: text/html; charset=UTF-8" . "\r\n";
-    $headers .= "From: TravelGO Orbit <travelgo.orbits@gmail.com>" . "\r\n";
-    $headers .= "Reply-To: travelgo.orbits@gmail.com" . "\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-    
-    // Send email
-    return mail($toEmail, $subject, $message, $headers);
-}
+    $mail = new PHPMailer(true);
 
-/**
- * Alternative function using PHPMailer (more reliable)
- * You'll need to install PHPMailer via Composer first
- */
-function sendVerificationEmailWithPHPMailer($toEmail, $userName, $token) {
-    // Uncomment and configure if you want to use PHPMailer
-    
-    /*
-    require 'vendor/autoload.php';
-    
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-    
     try {
         // Server settings
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
-        $mail->Username = 'travelgo.orbits@gmail.com';
-        $mail->Password = 'your-app-password'; // Use App Password, not regular password
-        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Username = 'travelgo.orbits@gmail.com'; // Your Gmail
+        $mail->Password = 'uvwussjqdqpwulvz'; // Your Gmail App Password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
-        
+
         // Recipients
         $mail->setFrom('travelgo.orbits@gmail.com', 'TravelGO Orbit');
         $mail->addAddress($toEmail, $userName);
-        
+        $mail->addReplyTo('travelgo.orbits@gmail.com', 'TravelGO Orbit');
+
         // Content
         $mail->isHTML(true);
         $mail->Subject = 'Verify Your Email - TravelGO Orbit';
         
+        // Create verification URL
         $verificationUrl = "http://" . $_SERVER['HTTP_HOST'] . "/verify_email.php?token=" . $token;
         
+        // Email content
         $mail->Body = "
-        <h2>Email Verification</h2>
-        <p>Hello " . htmlspecialchars($userName) . ",</p>
-        <p>Please verify your email address by clicking the link below:</p>
-        <a href='" . $verificationUrl . "'>" . $verificationUrl . "</a>
-        <p>This link will expire in 24 hours.</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #f59e0b, #1e3a8a); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .button { background: #f59e0b; color: #1e3a8a; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+                .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>TravelGO Orbit</h1>
+                    <h2>Email Verification</h2>
+                </div>
+                <div class='content'>
+                    <h3>Hello " . htmlspecialchars($userName) . ",</h3>
+                    <p>Thank you for registering with TravelGO Orbit! To complete your account setup and access all features, please verify your email address by clicking the button below:</p>
+                    
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='" . $verificationUrl . "' class='button'>Verify Email Address</a>
+                    </div>
+                    
+                    <p>Or copy and paste this link in your browser:</p>
+                    <p style='word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;'>" . $verificationUrl . "</p>
+                    
+                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    
+                    <p>If you didn't create an account with TravelGO Orbit, please ignore this email.</p>
+                </div>
+                <div class='footer'>
+                    <p>&copy; " . date('Y') . " TravelGO Orbit. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
         ";
         
+        // Alternative plain text version
+        $mail->AltBody = "Hello " . $userName . ",\n\nPlease verify your email address by visiting this link: " . $verificationUrl . "\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account with TravelGO Orbit, please ignore this email.";
+
         $mail->send();
         return true;
     } catch (Exception $e) {
         error_log("PHPMailer Error: " . $mail->ErrorInfo);
         return false;
     }
-    */
 }
 ?>
 
