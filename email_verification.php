@@ -4,11 +4,26 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require 'connection.php';
 
+// Debug: Check if PHPMailer files exist
+echo "Checking PHPMailer files:<br>";
+$files = [
+    'PHPMailer/src/Exception.php',
+    'PHPMailer/src/PHPMailer.php', 
+    'PHPMailer/src/SMTP.php'
+];
+
+foreach ($files as $file) {
+    if (file_exists($file)) {
+        echo "✓ $file exists<br>";
+    } else {
+        echo "✗ $file MISSING<br>";
+    }
+}
+
 // Include PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Manual includes (if not using Composer)
 require 'PHPMailer/src/Exception.php';
 require 'PHPMailer/src/PHPMailer.php';
 require 'PHPMailer/src/SMTP.php';
@@ -88,14 +103,30 @@ function sendVerificationEmail($toEmail, $userName, $token) {
     $mail = new PHPMailer(true);
 
     try {
+        // Enable verbose debugging
+        $mail->SMTPDebug = 2;
+        $mail->Debugoutput = function($str, $level) {
+            file_put_contents('smtp_debug.log', date('Y-m-d H:i:s') . " [{$level}]: {$str}\n", FILE_APPEND | LOCK_EX);
+        };
+
         // Server settings
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
-        $mail->Username = 'travelgo.orbits@gmail.com'; // Your Gmail
-        $mail->Password = 'uvwussjqdqpwulvz'; // Your Gmail App Password
+        $mail->Username = 'travelgo.orbits@gmail.com';
+        $mail->Password = 'upgrgcmgjicyokux'; // ← Replace with new app password
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
+        
+        // Additional settings for better compatibility
+        $mail->Timeout = 30;
+        $mail->SMTPOptions = array(
+            'ssl' => array(
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            )
+        );
 
         // Recipients
         $mail->setFrom('travelgo.orbits@gmail.com', 'TravelGO Orbit');
@@ -109,7 +140,7 @@ function sendVerificationEmail($toEmail, $userName, $token) {
         // Create verification URL
         $verificationUrl = "http://" . $_SERVER['HTTP_HOST'] . "/verify_email.php?token=" . $token;
         
-        // Email content
+        // Email content (your existing HTML template)
         $mail->Body = "
         <!DOCTYPE html>
         <html>
@@ -156,9 +187,15 @@ function sendVerificationEmail($toEmail, $userName, $token) {
         $mail->AltBody = "Hello " . $userName . ",\n\nPlease verify your email address by visiting this link: " . $verificationUrl . "\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account with TravelGO Orbit, please ignore this email.";
 
         $mail->send();
+        
+        // Log success
+        error_log("Email sent successfully to: " . $toEmail);
         return true;
+        
     } catch (Exception $e) {
-        error_log("PHPMailer Error: " . $mail->ErrorInfo);
+        // Log detailed error
+        error_log("PHPMailer Error: " . $e->getMessage());
+        error_log("SMTP Debug: " . $mail->ErrorInfo);
         return false;
     }
 }
