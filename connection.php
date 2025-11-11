@@ -1,13 +1,4 @@
 <?php
-// Enhanced connection.php with security headers
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Security headers
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
-header('X-XSS-Protection: 1; mode=block');
 
 $host = 'localhost';
 $db   = 'travelgo';

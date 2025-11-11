@@ -1,4 +1,7 @@
 <?php
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+header('X-XSS-Protection: 1; mode=block');
 // Check session status before starting
 if (session_status() == PHP_SESSION_NONE) {
     session_start();

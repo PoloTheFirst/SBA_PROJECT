@@ -2,6 +2,11 @@
 // Start session at the very beginning
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
+    
+    // Security headers - moved from connection.php
+    header('X-Frame-Options: DENY');
+    header('X-Content-Type-Options: nosniff');
+    header('X-XSS-Protection: 1; mode=block');
 }
 
 // Generate CSRF token if not exists

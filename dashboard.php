@@ -1,4 +1,7 @@
 <?php
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+header('X-XSS-Protection: 1; mode=block');
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -71,6 +74,7 @@ try {
     ");
     $offersStmt->execute([$_SESSION['user_id']]);
     $userOffers = $offersStmt->fetchAll();
+
 
     // Count available offers
     $availableOffersCount = count($userOffers);
@@ -373,6 +377,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $checkStmt->execute([$offer_id, $_SESSION['user_id']]);
 
                 if ($checkStmt->fetch()) {
+                    // Mark the offer as claimed (but not used yet)
+                    $updateStmt = $pdo->prepare("UPDATE user_offers SET is_claimed = 1 WHERE id = ? AND user_id = ?");
+                    $updateStmt->execute([$offer_id, $_SESSION['user_id']]);
+
                     $_SESSION['success'] = "Offer claimed successfully! You can use it during checkout.";
                 } else {
                     $_SESSION['error'] = "Offer not available or already claimed.";
@@ -1072,7 +1080,7 @@ $notifications = $notificationsStmt->fetchAll();
                                 <div class="space-y-4">
                                     <?php foreach ($bookings as $booking): ?>
                                         <div class="bg-gray-800 rounded-lg p-6 border-l-4 
-                                            <?= $booking['status'] === 'confirmed' ? 'border-green-500' : ($booking['status'] === 'pending' ? 'border-yellow-500' : 'border-red-500') ?>">
+                            <?= $booking['status'] === 'confirmed' ? 'border-green-500' : ($booking['status'] === 'pending' ? 'border-yellow-500' : 'border-red-500') ?>">
                                             <div class="flex justify-between items-start">
                                                 <div class="flex-1">
                                                     <div class="flex items-center space-x-4 mb-3">
@@ -1080,9 +1088,15 @@ $notifications = $notificationsStmt->fetchAll();
                                                             Booking #<?= htmlspecialchars($booking['booking_reference']) ?>
                                                         </h3>
                                                         <span class="px-3 py-1 rounded-full text-sm font-medium
-                                                            <?= $booking['status'] === 'confirmed' ? 'bg-green-900 text-green-300' : ($booking['status'] === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300') ?>">
+                                            <?= $booking['status'] === 'confirmed' ? 'bg-green-900 text-green-300' : ($booking['status'] === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300') ?>">
                                                             <?= ucfirst($booking['status']) ?>
                                                         </span>
+                                                        <?php if ($booking['payment_status']): ?>
+                                                            <span class="px-3 py-1 rounded-full text-sm font-medium
+                                                <?= $booking['payment_status'] === 'success' ? 'bg-blue-900 text-blue-300' : ($booking['payment_status'] === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300') ?>">
+                                                                Payment: <?= ucfirst($booking['payment_status']) ?>
+                                                            </span>
+                                                        <?php endif; ?>
                                                     </div>
 
                                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
@@ -1107,10 +1121,98 @@ $notifications = $notificationsStmt->fetchAll();
                                                     <div class="mt-3 text-xs text-gray-500">
                                                         Booked on <?= date('M j, Y g:i A', strtotime($booking['created_at'])) ?>
                                                     </div>
+
+                                                    <!-- Expanded Details Section (Hidden by Default) -->
+                                                    <div id="booking-details-<?= $booking['id'] ?>" class="hidden mt-6 pt-6 border-t border-gray-700">
+                                                        <h4 class="text-lg font-semibold text-white mb-4">Booking Details</h4>
+                                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                            <div class="space-y-4">
+                                                                <div>
+                                                                    <h5 class="text-gray-300 font-medium mb-2">Flight Information</h5>
+                                                                    <div class="space-y-2 text-sm">
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Airline:</span>
+                                                                            <span class="text-white"><?= $booking['airline_name'] ?></span>
+                                                                        </div>
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Flight Number:</span>
+                                                                            <span class="text-white"><?= $booking['flight_number'] ?></span>
+                                                                        </div>
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Route:</span>
+                                                                            <span class="text-white"><?= htmlspecialchars($booking['origin']) ?> to <?= htmlspecialchars($booking['destination']) ?></span>
+                                                                        </div>
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Selected Seats:</span>
+                                                                            <span class="text-white"><?= $booking['selected_seats_display'] ?></span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div>
+                                                                    <h5 class="text-gray-300 font-medium mb-2">Payment Information</h5>
+                                                                    <div class="space-y-2 text-sm">
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Total Amount:</span>
+                                                                            <span class="text-white font-semibold">HKD $<?= number_format($booking['total_amount'], 2) ?></span>
+                                                                        </div>
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Payment Status:</span>
+                                                                            <span class="text-white"><?= ucfirst($booking['payment_status'] ?? 'N/A') ?></span>
+                                                                        </div>
+                                                                        <?php if ($booking['transaction_id']): ?>
+                                                                            <div class="flex justify-between">
+                                                                                <span class="text-gray-400">Transaction ID:</span>
+                                                                                <span class="text-white font-mono text-xs"><?= htmlspecialchars($booking['transaction_id']) ?></span>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="space-y-4">
+                                                                <div>
+                                                                    <h5 class="text-gray-300 font-medium mb-2">Booking Information</h5>
+                                                                    <div class="space-y-2 text-sm">
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Booking Reference:</span>
+                                                                            <span class="text-white font-mono"><?= htmlspecialchars($booking['booking_reference']) ?></span>
+                                                                        </div>
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Booking Status:</span>
+                                                                            <span class="text-white"><?= ucfirst($booking['status']) ?></span>
+                                                                        </div>
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-400">Booking Date:</span>
+                                                                            <span class="text-white"><?= date('M j, Y g:i A', strtotime($booking['created_at'])) ?></span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div>
+                                                                    <h5 class="text-gray-300 font-medium mb-2">Actions</h5>
+                                                                    <div class="flex space-x-2">
+                                                                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                                            <i data-feather="download" class="w-3 h-3 mr-1"></i>
+                                                                            Download Ticket
+                                                                        </button>
+                                                                        <?php if ($booking['status'] === 'pending'): ?>
+                                                                            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                                                <i data-feather="x" class="w-3 h-3 mr-1"></i>
+                                                                                Cancel Booking
+                                                                            </button>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <div class="flex space-x-2">
-                                                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                    <button onclick="toggleBookingDetails(<?= $booking['id'] ?>)"
+                                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors inline-flex items-center">
+                                                        <i data-feather="chevron-down" class="w-4 h-4 mr-1" id="booking-icon-<?= $booking['id'] ?>"></i>
                                                         View Details
                                                     </button>
                                                     <?php if ($booking['status'] === 'pending'): ?>
@@ -1316,7 +1418,7 @@ $notifications = $notificationsStmt->fetchAll();
                                                     </div>
                                                 </div>
                                                 <div class="flex space-x-4 pt-4 border-t border-gray-700">
-                                                    <?php if ($offer['is_used'] == 0): ?>
+                                                    <?php if ($offer['is_used'] == 0 && empty($offer['is_claimed'])): ?>
                                                         <form method="POST" class="flex-1">
                                                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                                                             <input type="hidden" name="action" value="claim_offer">
@@ -1329,7 +1431,7 @@ $notifications = $notificationsStmt->fetchAll();
                                                         </form>
                                                     <?php else: ?>
                                                         <a href="index.php"
-                                                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
+                                                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
                                                             <i data-feather="shopping-cart" class="w-4 h-4 mr-2"></i>
                                                             Book Now
                                                         </a>
@@ -1549,6 +1651,21 @@ $notifications = $notificationsStmt->fetchAll();
                 details.classList.add('hidden');
                 icon.setAttribute('data-feather', 'chevron-down');
                 card.classList.remove('expanded');
+            }
+            feather.replace();
+        }
+
+        // Booking details toggle functionality
+        function toggleBookingDetails(bookingId) {
+            const details = document.getElementById('booking-details-' + bookingId);
+            const icon = document.getElementById('booking-icon-' + bookingId);
+
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                icon.setAttribute('data-feather', 'chevron-up');
+            } else {
+                details.classList.add('hidden');
+                icon.setAttribute('data-feather', 'chevron-down');
             }
             feather.replace();
         }
@@ -1863,6 +1980,20 @@ $notifications = $notificationsStmt->fetchAll();
             } else {
                 availabilityDiv.textContent = '';
             }
+        });
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize booking details functionality
+            const bookingButtons = document.querySelectorAll('[onclick^="toggleBookingDetails"]');
+            bookingButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // This ensures the click event is properly handled
+                });
+            });
+
+            // Re-initialize feather icons for any dynamic content
+            feather.replace();
         });
     </script>
 </body>

@@ -1,4 +1,7 @@
 <?php
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+header('X-XSS-Protection: 1; mode=block');
 require 'connection.php';
 
 $country_id = $_GET['country_id'] ?? 0;
