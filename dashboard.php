@@ -71,10 +71,10 @@ try {
     ");
     $offersStmt->execute([$_SESSION['user_id']]);
     $userOffers = $offersStmt->fetchAll();
-    
+
     // Count available offers
     $availableOffersCount = count($userOffers);
-    
+
     // If user has no offers and is eligible for first flight discount, create one
     if ($availableOffersCount === 0 && $bookingsCount === 0) {
         $firstOfferStmt = $pdo->prepare("
@@ -84,7 +84,7 @@ try {
             WHERE code = 'WELCOME15' AND for_new_users = 1 AND is_active = 1 AND valid_until > NOW()
         ");
         $firstOfferStmt->execute([$_SESSION['user_id']]);
-        
+
         // Reload offers
         $offersStmt->execute([$_SESSION['user_id']]);
         $userOffers = $offersStmt->fetchAll();
@@ -371,7 +371,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Check if user already has this offer claimed
                 $checkStmt = $pdo->prepare("SELECT id FROM user_offers WHERE id = ? AND user_id = ? AND is_used = 0");
                 $checkStmt->execute([$offer_id, $_SESSION['user_id']]);
-                
+
                 if ($checkStmt->fetch()) {
                     $_SESSION['success'] = "Offer claimed successfully! You can use it during checkout.";
                 } else {
@@ -426,7 +426,7 @@ foreach ($bookings as &$booking) {
     $booking['flight_number'] = trim($booking['flight_number'] ?? '', '"');
     $booking['origin'] = trim($booking['origin'] ?? '', '"');
     $booking['destination'] = trim($booking['destination'] ?? '', '"');
-    
+
     // Handle selected seats
     if ($booking['selected_seats']) {
         $seats = json_decode($booking['selected_seats'], true);
@@ -438,7 +438,7 @@ foreach ($bookings as &$booking) {
     } else {
         $booking['selected_seats_display'] = 'Not assigned';
     }
-    
+
     // Format dates
     $booking['formatted_date'] = date('M j, Y', strtotime($booking['booking_date']));
 }
@@ -1269,7 +1269,7 @@ $notifications = $notificationsStmt->fetchAll();
                                                     </div>
                                                     <h3 class="text-lg font-semibold text-white"><?= htmlspecialchars($offer['description']) ?></h3>
                                                 </div>
-                                                <button type="button" onclick="toggleOfferDetails(<?= $offer['id'] ?>)" 
+                                                <button type="button" onclick="toggleOfferDetails(<?= $offer['id'] ?>)"
                                                     class="text-gray-400 hover:text-white transition-colors">
                                                     <i data-feather="chevron-down" class="w-5 h-5" id="offer-icon-<?= $offer['id'] ?>"></i>
                                                 </button>
@@ -1309,29 +1309,31 @@ $notifications = $notificationsStmt->fetchAll();
                                                         <div>
                                                             <p class="font-semibold">How to use this offer:</p>
                                                             <p class="text-sm mt-1">
-                                                                Use code <strong><?= htmlspecialchars($offer['code']) ?></strong> during checkout on your next flight booking. 
+                                                                Use code <strong><?= htmlspecialchars($offer['code']) ?></strong> during checkout on your next flight booking.
                                                                 The discount will be automatically applied to your total amount.
                                                             </p>
                                                         </div>
                                                     </div>
                                                 </div>
-
                                                 <div class="flex space-x-4 pt-4 border-t border-gray-700">
-                                                    <form method="POST" class="flex-1">
-                                                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                                        <input type="hidden" name="action" value="claim_offer">
-                                                        <input type="hidden" name="offer_id" value="<?= $offer['id'] ?>">
-                                                        <button type="submit" 
-                                                            class="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
-                                                            <i data-feather="check" class="w-4 h-4 mr-2"></i>
-                                                            Claim This Offer
-                                                        </button>
-                                                    </form>
-                                                    <a href="index.php" 
-                                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
-                                                        <i data-feather="shopping-cart" class="w-4 h-4 mr-2"></i>
-                                                        Book Now
-                                                    </a>
+                                                    <?php if ($offer['is_used'] == 0): ?>
+                                                        <form method="POST" class="flex-1">
+                                                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                                            <input type="hidden" name="action" value="claim_offer">
+                                                            <input type="hidden" name="offer_id" value="<?= $offer['id'] ?>">
+                                                            <button type="submit"
+                                                                class="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
+                                                                <i data-feather="check" class="w-4 h-4 mr-2"></i>
+                                                                Claim This Offer
+                                                            </button>
+                                                        </form>
+                                                    <?php else: ?>
+                                                        <a href="index.php"
+                                                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded transition-colors flex items-center justify-center">
+                                                            <i data-feather="shopping-cart" class="w-4 h-4 mr-2"></i>
+                                                            Book Now
+                                                        </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1538,7 +1540,7 @@ $notifications = $notificationsStmt->fetchAll();
             const details = document.getElementById('offer-details-' + offerId);
             const icon = document.getElementById('offer-icon-' + offerId);
             const card = document.getElementById('offer-' + offerId);
-            
+
             if (details.classList.contains('hidden')) {
                 details.classList.remove('hidden');
                 icon.setAttribute('data-feather', 'chevron-up');

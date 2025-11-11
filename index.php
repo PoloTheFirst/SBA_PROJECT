@@ -379,28 +379,48 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
         </nav>
 
         <!-- Promo Banner -->
-        <div class="fixed top-16 w-full bg-yellow-400 z-40 shadow-md">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-center h-10">
-                    <div class="flex items-center space-x-2">
-                        <i data-feather="gift" class="w-4 h-4 text-blue-900"></i>
-                        <span class="text-blue-900 font-semibold text-sm md:text-base">
-                            New users enjoy <span class="font-bold">15% OFF</span> for their first flight booking!
-                        </span>
-                        <?php if (isset($_SESSION['user_id'])): ?>
-                            <a href="dashboard.php?view=special_offers" class="ml-2 bg-blue-900 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-800 transition-colors">
-                                Claim Offer
-                            </a>
-                        <?php else: ?>
-                            <a href="register.php" class="ml-2 bg-blue-900 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-800 transition-colors">
-                                Claim Offer
-                            </a>
-                        <?php endif; ?>
+        <?php
+        $showBanner = true;
+        if (isset($_SESSION['user_id'])) {
+            // Check if user has already claimed WELCOME15 offer
+            require 'connection.php';
+            $claimedStmt = $pdo->prepare("
+        SELECT COUNT(*) as count FROM user_offers 
+        WHERE user_id = ? AND offer_code = 'WELCOME15'
+    ");
+            $claimedStmt->execute([$_SESSION['user_id']]);
+            $hasClaimed = $claimedStmt->fetch()['count'] > 0;
+
+            if ($hasClaimed) {
+                $showBanner = false;
+            }
+        }
+        ?>
+
+        <?php if ($showBanner): ?>
+            <div class="fixed top-16 w-full bg-yellow-400 z-40 shadow-md">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-center h-10">
+                        <div class="flex items-center space-x-2">
+                            <i data-feather="gift" class="w-4 h-4 text-blue-900"></i>
+                            <span class="text-blue-900 font-semibold text-sm md:text-base">
+                                New users enjoy <span class="font-bold">15% OFF</span> for their first flight booking!
+                            </span>
+                            <?php if (isset($_SESSION['user_id'])): ?>
+                                <a href="dashboard.php?view=offers" class="ml-2 bg-blue-900 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-800 transition-colors">
+                                    Claim Offer
+                                </a>
+                            <?php else: ?>
+                                <a href="register.php" class="ml-2 bg-blue-900 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-800 transition-colors">
+                                    Claim Offer
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
+        <?php endif; ?>
+
         <!-- Hero Section -->
         <div class="container mx-auto px-4 py-32 flex flex-col items-center justify-center text-center">
             <h1 class="text-5xl font-bold text-white mb-6">Where will wanderlust take you?</h1>

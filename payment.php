@@ -29,7 +29,7 @@ function isValidLuhn($number)
 
         if ($i % 2 == $parity) {
             $digit *= 2;
-            if ($digit > 9) { 
+            if ($digit > 9) {
                 $digit -= 9;
             }
         }
@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle coupon application
         $coupon_code = $_POST['coupon_code'] ?? '';
         $coupon_result = applyCoupon($coupon_code);
-        
+
         if ($coupon_result['success']) {
             $_SESSION['payment_data']['applied_coupon'] = $coupon_result['coupon'];
             $_SESSION['payment_data']['discount_amount'] = $coupon_result['discount_amount'];
@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $_SESSION['error'] = $coupon_result['message'];
         }
-        
+
         header("Location: payment.php?step=5");
         exit();
     } elseif ($action === 'remove_coupon') {
@@ -151,31 +151,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($_SESSION['payment_data']['applied_coupon']);
         unset($_SESSION['payment_data']['discount_amount']);
         $_SESSION['success'] = "Coupon removed successfully.";
-        
+
         header("Location: payment.php?step=5");
         exit();
     }
 }
 
-function applyCoupon($coupon_code) {
+function applyCoupon($coupon_code)
+{
     global $pdo;
-    
+
     // Validate coupon code
     if (empty($coupon_code)) {
         return ['success' => false, 'message' => 'Please enter a coupon code.'];
     }
-    
+
     // Check if user has already used this coupon
     $used_coupon_stmt = $pdo->prepare("
         SELECT * FROM user_coupons 
         WHERE user_id = ? AND coupon_id IN (SELECT id FROM coupons WHERE code = ?)
     ");
     $used_coupon_stmt->execute([$_SESSION['user_id'], $coupon_code]);
-    
+
     if ($used_coupon_stmt->fetch()) {
         return ['success' => false, 'message' => 'This coupon has already been used.'];
     }
-    
+
     // Get coupon details
     $coupon_stmt = $pdo->prepare("
         SELECT * FROM coupons 
@@ -183,28 +184,28 @@ function applyCoupon($coupon_code) {
     ");
     $coupon_stmt->execute([$coupon_code]);
     $coupon = $coupon_stmt->fetch();
-    
+
     if (!$coupon) {
         return ['success' => false, 'message' => 'Invalid or expired coupon code.'];
     }
-    
+
     // Check if user is eligible (for new user coupons)
     if ($coupon['for_new_users']) {
         $user_bookings_stmt = $pdo->prepare("SELECT COUNT(*) as booking_count FROM bookings WHERE user_id = ?");
         $user_bookings_stmt->execute([$_SESSION['user_id']]);
         $user_bookings = $user_bookings_stmt->fetch();
-        
+
         if ($user_bookings['booking_count'] > 0) {
             return ['success' => false, 'message' => 'This coupon is only for new users.'];
         }
     }
-    
+
     // Check minimum amount requirement
     $base_amount = $_SESSION['payment_data']['base_amount'] ?? 0;
     if ($base_amount < $coupon['min_amount']) {
         return ['success' => false, 'message' => 'Minimum amount requirement not met for this coupon.'];
     }
-    
+
     // Calculate discount amount
     $discount_amount = 0;
     if ($coupon['discount_type'] === 'percentage') {
@@ -216,7 +217,7 @@ function applyCoupon($coupon_code) {
     } else {
         $discount_amount = $coupon['discount_value'];
     }
-    
+
     return [
         'success' => true,
         'coupon' => $coupon,
@@ -246,7 +247,7 @@ function processPayment()
         $tax_amount = $_SESSION['payment_data']['tax_amount'] ?? 0;
         $seat_charges = $_SESSION['payment_data']['seat_charges'] ?? 0;
         $discount_amount = $_SESSION['payment_data']['discount_amount'] ?? 0;
-        
+
         $final_total = ($base_amount + $tax_amount + $seat_charges) - $discount_amount;
         if ($final_total < 0) $final_total = 0; // Ensure total doesn't go negative
 
@@ -318,14 +319,27 @@ function processPayment()
         if (isset($_SESSION['payment_data']['applied_coupon'])) {
             $coupon = $_SESSION['payment_data']['applied_coupon'];
             $coupon_usage_stmt = $pdo->prepare("
-                INSERT INTO user_coupons (user_id, coupon_id, booking_id, used_at) 
-                VALUES (?, ?, ?, NOW())
-            ");
+        INSERT INTO user_coupons (user_id, coupon_id, booking_id, used_at) 
+        VALUES (?, ?, ?, NOW())
+    ");
             $coupon_usage_stmt->execute([
                 $_SESSION['user_id'],
                 $coupon['id'],
                 $booking_id
             ]);
+
+            // Also mark the user_offers entry as used
+            $update_offer_stmt = $pdo->prepare("
+        UPDATE user_offers 
+        SET is_used = 1, used_at = NOW(), booking_id = ?
+        WHERE user_id = ? AND offer_code = ? AND is_used = 0
+    ");
+            $update_offer_stmt->execute([
+                $booking_id,
+                $_SESSION['user_id'],
+                $coupon['code']
+            ]);
+
             error_log("Coupon usage recorded for coupon ID: " . $coupon['id']);
         }
 
@@ -387,7 +401,8 @@ function processPayment()
     }
 }
 
-function generateBookingSummary() {
+function generateBookingSummary()
+{
     // Use session data instead of database query for immediate access
     if (!isset($_SESSION['booking_data'])) {
         return null;
@@ -396,10 +411,11 @@ function generateBookingSummary() {
     return $_SESSION['booking_data'];
 }
 
-function displayIntegratedReceipt() {
+function displayIntegratedReceipt()
+{
     // Try to get booking data from session first
     $bookingSummary = generateBookingSummary();
-    
+
     // If not available, try to reconstruct from payment_data session
     if (!$bookingSummary && isset($_SESSION['payment_data'])) {
         $paymentData = $_SESSION['payment_data'];
@@ -418,14 +434,14 @@ function displayIntegratedReceipt() {
             'discount_amount' => $paymentData['discount_amount'] ?? 0
         ];
     }
-    
+
     if (!$bookingSummary) {
         return '<div class="bg-red-900 text-white p-4 rounded">Receipt data not available. Please try again.</div>';
     }
 
     $flight = $bookingSummary['flight_details'];
     $passengers = $bookingSummary['passenger_info'];
-    
+
     // Handle selected seats if it's a string
     $selectedSeats = $bookingSummary['selected_seats'] ?? [];
     if (is_string($selectedSeats)) {
@@ -434,7 +450,7 @@ function displayIntegratedReceipt() {
     if (!is_array($selectedSeats)) {
         $selectedSeats = [];
     }
-    
+
     ob_start(); ?>
     <div class="receipt-container bg-white text-gray-900 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
         <div class="text-center mb-6">
@@ -449,14 +465,14 @@ function displayIntegratedReceipt() {
                 <p><strong>Transaction ID:</strong> <?= htmlspecialchars($bookingSummary['transaction_id'] ?? 'N/A') ?></p>
                 <p><strong>Booking Date:</strong> <?= date('F j, Y g:i A', strtotime($bookingSummary['booking_date'] ?? 'now')) ?></p>
             </div>
-            
+
             <div class="bg-gray-50 p-4 rounded">
                 <h3 class="font-semibold mb-2">Flight Information</h3>
                 <p><strong>Airline:</strong> <?= htmlspecialchars($flight['airline_name'] ?? 'Unknown') ?></p>
                 <p><strong>Flight:</strong> <?= htmlspecialchars($flight['flight_number'] ?? 'N/A') ?></p>
                 <p><strong>Route:</strong> <?= htmlspecialchars($flight['origin'] ?? 'Unknown') ?> → <?= htmlspecialchars($flight['destination'] ?? 'Unknown') ?></p>
                 <?php if (isset($flight['departure_date'])): ?>
-                <p><strong>Travel Dates:</strong> <?= date('M j, Y', strtotime($flight['departure_date'])) ?> - <?= date('M j, Y', strtotime($flight['return_date'] ?? $flight['departure_date'])) ?></p>
+                    <p><strong>Travel Dates:</strong> <?= date('M j, Y', strtotime($flight['departure_date'])) ?> - <?= date('M j, Y', strtotime($flight['return_date'] ?? $flight['departure_date'])) ?></p>
                 <?php endif; ?>
             </div>
         </div>
@@ -490,49 +506,49 @@ function displayIntegratedReceipt() {
 
         <!-- Selected Seats -->
         <?php if (!empty($selectedSeats)): ?>
-        <div class="bg-gray-50 p-4 rounded mb-6">
-            <h3 class="font-semibold mb-2">Selected Seats</h3>
-            <p class="text-gray-900"><?= is_array($selectedSeats) ? implode(', ', $selectedSeats) : htmlspecialchars($selectedSeats) ?></p>
-        </div>
+            <div class="bg-gray-50 p-4 rounded mb-6">
+                <h3 class="font-semibold mb-2">Selected Seats</h3>
+                <p class="text-gray-900"><?= is_array($selectedSeats) ? implode(', ', $selectedSeats) : htmlspecialchars($selectedSeats) ?></p>
+            </div>
         <?php endif; ?>
 
         <!-- Billing Address -->
         <?php if (isset($_SESSION['payment_data']['billing_address'])): ?>
-        <div class="bg-gray-50 p-4 rounded mb-6">
-            <h3 class="font-semibold mb-2">Billing Address</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div><span class="text-gray-600">Street:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street']) ?></span></div>
-                <div><span class="text-gray-600">City:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city']) ?></span></div>
-                <div><span class="text-gray-600">State/Province:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state']) ?></span></div>
-                <div><span class="text-gray-600">ZIP/Postal Code:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip']) ?></span></div>
-                <div class="md:col-span-2"><span class="text-gray-600">Country:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country']) ?></span></div>
+            <div class="bg-gray-50 p-4 rounded mb-6">
+                <h3 class="font-semibold mb-2">Billing Address</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span class="text-gray-600">Street:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street']) ?></span></div>
+                    <div><span class="text-gray-600">City:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city']) ?></span></div>
+                    <div><span class="text-gray-600">State/Province:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state']) ?></span></div>
+                    <div><span class="text-gray-600">ZIP/Postal Code:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip']) ?></span></div>
+                    <div class="md:col-span-2"><span class="text-gray-600">Country:</span> <span class="text-gray-900"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country']) ?></span></div>
+                </div>
             </div>
-        </div>
         <?php endif; ?>
 
         <!-- Payment Method -->
         <?php if (isset($_SESSION['payment_data']['payment_method'])): ?>
-        <div class="bg-gray-50 p-4 rounded mb-6">
-            <h3 class="font-semibold mb-2">Payment Method</h3>
-            <p class="text-gray-900"><?= ucfirst(str_replace('_', ' ', $_SESSION['payment_data']['payment_method'])) ?></p>
-        </div>
+            <div class="bg-gray-50 p-4 rounded mb-6">
+                <h3 class="font-semibold mb-2">Payment Method</h3>
+                <p class="text-gray-900"><?= ucfirst(str_replace('_', ' ', $_SESSION['payment_data']['payment_method'])) ?></p>
+            </div>
         <?php endif; ?>
 
         <!-- Applied Coupon -->
         <?php if (isset($bookingSummary['applied_coupon'])): ?>
-        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
-            <h3 class="font-semibold mb-2 text-green-800">Applied Coupon</h3>
-            <div class="flex justify-between items-center">
-                <div>
-                    <p class="text-green-700 font-semibold"><?= htmlspecialchars($bookingSummary['applied_coupon']['code']) ?></p>
-                    <p class="text-green-600 text-sm"><?= htmlspecialchars($bookingSummary['applied_coupon']['description']) ?></p>
-                </div>
-                <div class="text-right">
-                    <p class="text-green-700 font-bold">-HKD $<?= number_format($bookingSummary['discount_amount'], 2) ?></p>
-                    <p class="text-green-600 text-sm">Discount Applied</p>
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
+                <h3 class="font-semibold mb-2 text-green-800">Applied Coupon</h3>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-green-700 font-semibold"><?= htmlspecialchars($bookingSummary['applied_coupon']['code']) ?></p>
+                        <p class="text-green-600 text-sm"><?= htmlspecialchars($bookingSummary['applied_coupon']['description']) ?></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-green-700 font-bold">-HKD $<?= number_format($bookingSummary['discount_amount'], 2) ?></p>
+                        <p class="text-green-600 text-sm">Discount Applied</p>
+                    </div>
                 </div>
             </div>
-        </div>
         <?php endif; ?>
 
         <!-- Payment Summary -->
@@ -544,22 +560,22 @@ function displayIntegratedReceipt() {
                     <span>HKD $<?= number_format($bookingSummary['base_amount'] ?? 0, 2) ?></span>
                 </div>
                 <?php if (isset($bookingSummary['tax_amount']) && $bookingSummary['tax_amount'] > 0): ?>
-                <div class="flex justify-between">
-                    <span>Taxes & Fees (3%):</span>
-                    <span>HKD $<?= number_format($bookingSummary['tax_amount'] ?? 0, 2) ?></span>
-                </div>
+                    <div class="flex justify-between">
+                        <span>Taxes & Fees (3%):</span>
+                        <span>HKD $<?= number_format($bookingSummary['tax_amount'] ?? 0, 2) ?></span>
+                    </div>
                 <?php endif; ?>
                 <?php if (($bookingSummary['seat_charges'] ?? 0) > 0): ?>
-                <div class="flex justify-between">
-                    <span>Seat Selection Charges:</span>
-                    <span>HKD $<?= number_format($bookingSummary['seat_charges'] ?? 0, 2) ?></span>
-                </div>
+                    <div class="flex justify-between">
+                        <span>Seat Selection Charges:</span>
+                        <span>HKD $<?= number_format($bookingSummary['seat_charges'] ?? 0, 2) ?></span>
+                    </div>
                 <?php endif; ?>
                 <?php if (($bookingSummary['discount_amount'] ?? 0) > 0): ?>
-                <div class="flex justify-between text-green-600">
-                    <span>Coupon Discount:</span>
-                    <span>-HKD $<?= number_format($bookingSummary['discount_amount'] ?? 0, 2) ?></span>
-                </div>
+                    <div class="flex justify-between text-green-600">
+                        <span>Coupon Discount:</span>
+                        <span>-HKD $<?= number_format($bookingSummary['discount_amount'] ?? 0, 2) ?></span>
+                    </div>
                 <?php endif; ?>
                 <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
                     <span>Total Amount:</span>
@@ -572,7 +588,7 @@ function displayIntegratedReceipt() {
             <div class="flex">
                 <div class="ml-3">
                     <p class="text-sm text-yellow-700">
-                        <strong>Important:</strong> Your booking confirmation has been sent to your email. 
+                        <strong>Important:</strong> Your booking confirmation has been sent to your email.
                         Please present this receipt at check-in.
                     </p>
                 </div>
@@ -588,7 +604,7 @@ function displayIntegratedReceipt() {
             </a>
         </div>
     </div>
-    <?php
+<?php
     return ob_get_clean();
 }
 
@@ -799,6 +815,7 @@ $seat_map = generateSeatMap();
             border: none;
             border-radius: 8px;
             font-size: 16px;
+            color: #000000;
         }
 
         .coupon-btn {
@@ -938,252 +955,431 @@ $seat_map = generateSeatMap();
                 <?php if ($step < 5): ?>
                     <form method="POST" id="payment-form">
                         <input type="hidden" name="action" value="save_step">
-                <?php endif; ?>
+                    <?php endif; ?>
 
-                <?php
-                switch ($step) {
-                    case 1: ?>
-                        <!-- Step 1: Passenger Information -->
-                        <h2 class="text-2xl font-bold mb-6">Passenger Information</h2>
+                    <?php
+                    switch ($step) {
+                        case 1: ?>
+                            <!-- Step 1: Passenger Information -->
+                            <h2 class="text-2xl font-bold mb-6">Passenger Information</h2>
 
-                        <!-- Use Profile Data Button -->
-                        <?php if (isset($_SESSION['user_id']) && $user): ?>
-                            <div class="use-profile-data p-4 rounded-lg mb-6">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <h3 class="font-semibold text-blue-300">Use your profile information?</h3>
-                                        <p class="text-blue-200 text-sm">We can pre-fill your details from your profile</p>
+                            <!-- Use Profile Data Button -->
+                            <?php if (isset($_SESSION['user_id']) && $user): ?>
+                                <div class="use-profile-data p-4 rounded-lg mb-6">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h3 class="font-semibold text-blue-300">Use your profile information?</h3>
+                                            <p class="text-blue-200 text-sm">We can pre-fill your details from your profile</p>
+                                        </div>
+                                        <button type="button" id="use-profile-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                                            Use My Profile Data
+                                        </button>
                                     </div>
-                                    <button type="button" id="use-profile-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
-                                        Use My Profile Data
-                                    </button>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="space-y-4">
+                                <?php for ($i = 1; $i <= $passengers; $i++): ?>
+                                    <div class="border-b border-gray-700 pb-4 mb-4">
+                                        <h3 class="text-lg font-semibold mb-3">
+                                            Passenger <?= $i ?>
+                                            <?php if ($i == 1): ?>
+                                                <span class="text-sm text-yellow-400">(Primary Passenger)</span>
+                                            <?php endif; ?>
+                                        </h3>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-gray-300 mb-2">First Name</label>
+                                                <input type="text" name="step_data[passenger_info][passenger_<?= $i ?>][first_name]"
+                                                    value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['first_name'] ?? '') ?>"
+                                                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                                <div class="error-message" id="first_name_error_<?= $i ?>">Please enter first name</div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-gray-300 mb-2">Last Name</label>
+                                                <input type="text" name="step_data[passenger_info][passenger_<?= $i ?>][last_name]"
+                                                    value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['last_name'] ?? '') ?>"
+                                                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                                <div class="error-message" id="last_name_error_<?= $i ?>">Please enter last name</div>
+                                            </div>
+
+                                            <?php if ($i == 1): ?>
+                                                <!-- Primary passenger additional fields -->
+                                                <div>
+                                                    <label class="block text-gray-300 mb-2">Email</label>
+                                                    <input type="email" name="step_data[passenger_info][passenger_<?= $i ?>][email]"
+                                                        value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['email'] ?? '') ?>"
+                                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                                    <div class="error-message" id="email_error_<?= $i ?>">Please enter a valid email address</div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-gray-300 mb-2">Phone</label>
+                                                    <input type="tel" name="step_data[passenger_info][passenger_<?= $i ?>][phone]"
+                                                        value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['phone'] ?? '') ?>"
+                                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                                    <div class="error-message" id="phone_error_<?= $i ?>">Please enter a valid phone number</div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-gray-300 mb-2">Gender</label>
+                                                    <select name="step_data[passenger_info][passenger_<?= $i ?>][gender]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                                        <option value="">Select Gender</option>
+                                                        <option value="male" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'male' ? 'selected' : '' ?>>Male</option>
+                                                        <option value="female" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
+                                                        <option value="other" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'other' ? 'selected' : '' ?>>Other</option>
+                                                    </select>
+                                                    <div class="error-message" id="gender_error_<?= $i ?>">Please select gender</div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-gray-300 mb-2">Date of Birth</label>
+                                                    <input type="date" name="step_data[passenger_info][passenger_<?= $i ?>][dob]"
+                                                        value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['dob'] ?? '') ?>"
+                                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white"
+                                                        max="<?= date('Y-m-d', strtotime('-18 years')) ?>" required>
+                                                    <div class="error-message" id="dob_error_<?= $i ?>">You must be at least 18 years old</div>
+                                                </div>
+                                            <?php else: ?>
+                                                <!-- Other passengers - only name and gender -->
+                                                <div class="md:col-span-2">
+                                                    <label class="block text-gray-300 mb-2">Gender</label>
+                                                    <select name="step_data[passenger_info][passenger_<?= $i ?>][gender]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                                        <option value="">Select Gender</option>
+                                                        <option value="male" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'male' ? 'selected' : '' ?>>Male</option>
+                                                        <option value="female" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
+                                                        <option value="other" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'other' ? 'selected' : '' ?>>Other</option>
+                                                    </select>
+                                                    <div class="error-message" id="gender_error_<?= $i ?>">Please select gender</div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+                        <?php
+                            break;
+
+                        case 2: ?>
+                            <!-- Step 2: Billing Address -->
+                            <h2 class="text-2xl font-bold mb-6">Billing Address</h2>
+
+                            <!-- Use Profile Data Button -->
+                            <?php if (isset($_SESSION['user_id']) && $user): ?>
+                                <div class="use-profile-data p-4 rounded-lg mb-6">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h3 class="font-semibold text-blue-300">Use your profile address?</h3>
+                                            <p class="text-blue-200 text-sm">We can pre-fill your billing address from your profile</p>
+                                        </div>
+                                        <button type="button" id="use-billing-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                                            Use My Address
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-gray-300 mb-2">Street Address</label>
+                                        <input type="text" name="step_data[billing_address][street]"
+                                            value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street'] ?? ($user['address'] ?? '')) ?>"
+                                            class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                        <div class="error-message" id="street_error">Please enter a valid street address</div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">City</label>
+                                        <input type="text" name="step_data[billing_address][city]"
+                                            value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city'] ?? ($user['city_name'] ?? '')) ?>"
+                                            class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                        <div class="error-message" id="city_error">Please enter a valid city</div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">State/Province</label>
+                                        <input type="text" name="step_data[billing_address][state]" id="billing_state"
+                                            value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state'] ?? ($user['state_name'] ?? '')) ?>"
+                                            class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                        <div class="error-message" id="state_error">Please enter a state/province</div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">ZIP/Postal Code</label>
+                                        <input type="text" name="step_data[billing_address][zip]"
+                                            value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip'] ?? ($user['postal_code'] ?? '')) ?>"
+                                            class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                        <div class="error-message" id="zip_error">Please enter a valid ZIP/postal code</div>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-gray-300 mb-2">Country</label>
+                                        <input type="text" name="step_data[billing_address][country]"
+                                            value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country'] ?? ($user['country_name'] ?? '')) ?>"
+                                            class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
+                                        <div class="error-message" id="country_error">Please enter a valid country</div>
+                                    </div>
                                 </div>
                             </div>
-                        <?php endif; ?>
+                        <?php
+                            break;
 
-                        <div class="space-y-4">
-                            <?php for ($i = 1; $i <= $passengers; $i++): ?>
-                                <div class="border-b border-gray-700 pb-4 mb-4">
-                                    <h3 class="text-lg font-semibold mb-3">
-                                        Passenger <?= $i ?>
-                                        <?php if ($i == 1): ?>
-                                            <span class="text-sm text-yellow-400">(Primary Passenger)</span>
-                                        <?php endif; ?>
-                                    </h3>
+                        case 3: ?>
+                            <!-- Step 3: Payment Method -->
+                            <h2 class="text-2xl font-bold mb-6">Payment Method</h2>
+                            <div class="space-y-4">
+                                <div class="bg-yellow-900 border border-yellow-700 text-yellow-200 px-4 py-3 rounded mb-4">
+                                    <strong>Demo Notice:</strong> This is a simulation. No real payment will be processed.
+                                </div>
+
+                                <div class="space-y-3">
+                                    <label class="flex items-center space-x-3 p-4 border border-gray-600 rounded hover:bg-gray-800 cursor-pointer">
+                                        <input type="radio" name="step_data[payment_method]" value="credit_card"
+                                            <?= ($_SESSION['payment_data']['payment_method'] ?? '') === 'credit_card' ? 'checked' : '' ?> class="text-yellow-500" required>
+                                        <i data-feather="credit-card" class="text-gray-400"></i>
+                                        <span>Credit Card</span>
+                                    </label>
+
+                                    <label class="flex items-center space-x-3 p-4 border border-gray-600 rounded hover:bg-gray-800 cursor-pointer">
+                                        <input type="radio" name="step_data[payment_method]" value="debit_card"
+                                            <?= ($_SESSION['payment_data']['payment_method'] ?? '') === 'debit_card' ? 'checked' : '' ?> class="text-yellow-500">
+                                        <i data-feather="credit-card" class="text-gray-400"></i>
+                                        <span>Debit Card</span>
+                                    </label>
+
+                                    <label class="flex items-center space-x-3 p-4 border border-gray-600 rounded hover:bg-gray-800 cursor-pointer">
+                                        <input type="radio" name="step_data[payment_method]" value="paypal"
+                                            <?= ($_SESSION['payment_data']['payment_method'] ?? '') === 'paypal' ? 'checked' : '' ?> class="text-yellow-500">
+                                        <i data-feather="dollar-sign" class="text-gray-400"></i>
+                                        <span>PayPal</span>
+                                    </label>
+                                </div>
+                                <div class="error-message" id="payment_error">Please select a payment method</div>
+
+                                <!-- Credit Card Details (shown only when credit/debit card is selected) -->
+                                <div id="card-details" class="mt-4 p-4 bg-gray-800 rounded-lg hidden">
+                                    <h3 class="text-lg font-semibold mb-4">Card Details</h3>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label class="block text-gray-300 mb-2">First Name</label>
-                                            <input type="text" name="step_data[passenger_info][passenger_<?= $i ?>][first_name]"
-                                                value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['first_name'] ?? '') ?>"
-                                                class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                            <div class="error-message" id="first_name_error_<?= $i ?>">Please enter first name</div>
+                                            <label class="block text-gray-300 mb-2">Card Number</label>
+                                            <input type="text" id="card_number"
+                                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                                                placeholder="1234 5678 9012 3456" maxlength="19">
+                                            <div class="error-message" id="card_number_error">Please enter a valid card number</div>
                                         </div>
                                         <div>
-                                            <label class="block text-gray-300 mb-2">Last Name</label>
-                                            <input type="text" name="step_data[passenger_info][passenger_<?= $i ?>][last_name]"
-                                                value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['last_name'] ?? '') ?>"
-                                                class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                            <div class="error-message" id="last_name_error_<?= $i ?>">Please enter last name</div>
+                                            <label class="block text-gray-300 mb-2">Cardholder Name</label>
+                                            <input type="text" id="card_name"
+                                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                                                placeholder="John Doe">
+                                            <div class="error-message" id="card_name_error">Please enter cardholder name</div>
                                         </div>
-
-                                        <?php if ($i == 1): ?>
-                                            <!-- Primary passenger additional fields -->
-                                            <div>
-                                                <label class="block text-gray-300 mb-2">Email</label>
-                                                <input type="email" name="step_data[passenger_info][passenger_<?= $i ?>][email]"
-                                                    value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['email'] ?? '') ?>"
-                                                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                                <div class="error-message" id="email_error_<?= $i ?>">Please enter a valid email address</div>
-                                            </div>
-                                            <div>
-                                                <label class="block text-gray-300 mb-2">Phone</label>
-                                                <input type="tel" name="step_data[passenger_info][passenger_<?= $i ?>][phone]"
-                                                    value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['phone'] ?? '') ?>"
-                                                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                                <div class="error-message" id="phone_error_<?= $i ?>">Please enter a valid phone number</div>
-                                            </div>
-                                            <div>
-                                                <label class="block text-gray-300 mb-2">Gender</label>
-                                                <select name="step_data[passenger_info][passenger_<?= $i ?>][gender]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                                    <option value="">Select Gender</option>
-                                                    <option value="male" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'male' ? 'selected' : '' ?>>Male</option>
-                                                    <option value="female" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
-                                                    <option value="other" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'other' ? 'selected' : '' ?>>Other</option>
-                                                </select>
-                                                <div class="error-message" id="gender_error_<?= $i ?>">Please select gender</div>
-                                            </div>
-                                            <div>
-                                                <label class="block text-gray-300 mb-2">Date of Birth</label>
-                                                <input type="date" name="step_data[passenger_info][passenger_<?= $i ?>][dob]"
-                                                    value="<?= htmlspecialchars($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['dob'] ?? '') ?>"
-                                                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white"
-                                                    max="<?= date('Y-m-d', strtotime('-18 years')) ?>" required>
-                                                <div class="error-message" id="dob_error_<?= $i ?>">You must be at least 18 years old</div>
-                                            </div>
-                                        <?php else: ?>
-                                            <!-- Other passengers - only name and gender -->
-                                            <div class="md:col-span-2">
-                                                <label class="block text-gray-300 mb-2">Gender</label>
-                                                <select name="step_data[passenger_info][passenger_<?= $i ?>][gender]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                                    <option value="">Select Gender</option>
-                                                    <option value="male" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'male' ? 'selected' : '' ?>>Male</option>
-                                                    <option value="female" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
-                                                    <option value="other" <?= ($_SESSION['payment_data']['passenger_info']['passenger_' . $i]['gender'] ?? '') === 'other' ? 'selected' : '' ?>>Other</option>
-                                                </select>
-                                                <div class="error-message" id="gender_error_<?= $i ?>">Please select gender</div>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div>
+                                            <label class="block text-gray-300 mb-2">Expiry Date</label>
+                                            <input type="text" id="card_expiry"
+                                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                                                placeholder="MM/YY" maxlength="5">
+                                            <div class="error-message" id="card_expiry_error">Please enter a valid expiry date</div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-300 mb-2">CVV</label>
+                                            <input type="text" id="card_cvv"
+                                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                                                placeholder="123" maxlength="4">
+                                            <div class="error-message" id="card_cvv_error">Please enter a valid CVV</div>
+                                        </div>
                                     </div>
                                 </div>
-                            <?php endfor; ?>
-                        </div>
-                    <?php
-                        break;
+                            </div>
+                        <?php
+                            break;
 
-                    case 2: ?>
-                        <!-- Step 2: Billing Address -->
-                        <h2 class="text-2xl font-bold mb-6">Billing Address</h2>
+                        case 4: ?>
+                            <!-- Step 4: Seat Selection -->
+                            <h2 class="text-2xl font-bold mb-6">Seat Selection</h2>
+                            <div class="bg-blue-900 border border-blue-700 text-blue-200 px-4 py-3 rounded mb-6">
+                                <strong>Instructions:</strong> Please select <?= $passengers ?> seat(s) for your flight.
+                                Premium seats (dark yellow) cost an extra HKD 50 per seat.
+                            </div>
 
-                        <!-- Use Profile Data Button -->
-                        <?php if (isset($_SESSION['user_id']) && $user): ?>
-                            <div class="use-profile-data p-4 rounded-lg mb-6">
+                            <div class="airplane-cabin">
+                                <div class="cabin-label">Business Class (Rows 1-2)</div>
+                                <div class="seat-map-container">
+                                    <?php
+                                    // Handle selected seats properly to avoid array error
+                                    $selected_seats = $_SESSION['payment_data']['selected_seats'] ?? [];
+                                    if (is_string($selected_seats)) {
+                                        $selected_seats = json_decode($selected_seats, true) ?? [];
+                                    }
+                                    if (!is_array($selected_seats)) {
+                                        $selected_seats = [];
+                                    }
+
+                                    for ($row = 1; $row <= 2; $row++): ?>
+                                        <?php for ($col = 0; $col < 6; $col++): ?>
+                                            <?php
+                                            $seat = $seat_map[($row - 1) * 6 + $col];
+                                            $seat_class = 'seat ' . $seat['type'];
+                                            if (in_array($seat['number'], $selected_seats)) {
+                                                $seat_class .= ' selected';
+                                            }
+                                            ?>
+                                            <div class="<?= $seat_class ?>"
+                                                data-seat="<?= $seat['number'] ?>"
+                                                data-price="<?= $seat['price'] ?>"
+                                                onclick="selectSeat(this)">
+                                                <?= $seat['number'] ?>
+                                            </div>
+                                        <?php endfor; ?>
+                                    <?php endfor; ?>
+                                </div>
+
+                                <div class="cabin-label mt-8">Economy Class (Rows 3-10)</div>
+                                <div class="seat-map-container">
+                                    <?php for ($row = 3; $row <= 10; $row++): ?>
+                                        <?php for ($col = 0; $col < 6; $col++): ?>
+                                            <?php
+                                            $seat = $seat_map[($row - 1) * 6 + $col];
+                                            $seat_class = 'seat ' . $seat['type'];
+                                            if (in_array($seat['number'], $selected_seats)) {
+                                                $seat_class .= ' selected';
+                                            }
+                                            ?>
+                                            <div class="<?= $seat_class ?>"
+                                                data-seat="<?= $seat['number'] ?>"
+                                                data-price="<?= $seat['price'] ?>"
+                                                onclick="selectSeat(this)">
+                                                <?= $seat['number'] ?>
+                                            </div>
+                                        <?php endfor; ?>
+                                    <?php endfor; ?>
+                                </div>
+                            </div>
+
+                            <!-- Seat Legend -->
+                            <div class="flex justify-center space-x-6 mt-6 text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-4 h-4 bg-yellow-500 rounded"></div>
+                                    <span class="text-gray-300">Available (HKD 0)</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-4 h-4 bg-yellow-700 rounded"></div>
+                                    <span class="text-gray-300">Premium (HKD 50)</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-4 h-4 bg-green-500 rounded"></div>
+                                    <span class="text-gray-300">Selected</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-4 h-4 bg-gray-600 rounded relative">
+                                        <span class="absolute inset-0 flex items-center justify-center text-red-500 text-xs">✕</span>
+                                    </div>
+                                    <span class="text-gray-300">Occupied</span>
+                                </div>
+                            </div>
+
+                            <!-- Selected Seats Summary -->
+                            <div class="mt-6 p-4 bg-gray-800 rounded-lg">
+                                <h3 class="font-semibold mb-3">Selected Seats</h3>
+                                <div id="selected-seats-list" class="text-gray-300 mb-2">
+                                    <?php
+                                    echo !empty($selected_seats) ? implode(', ', $selected_seats) : 'No seats selected';
+                                    ?>
+                                </div>
                                 <div class="flex justify-between items-center">
-                                    <div>
-                                        <h3 class="font-semibold text-blue-300">Use your profile address?</h3>
-                                        <p class="text-blue-200 text-sm">We can pre-fill your billing address from your profile</p>
-                                    </div>
-                                    <button type="button" id="use-billing-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
-                                        Use My Address
-                                    </button>
+                                    <span class="text-gray-400">Extra Charges:</span>
+                                    <span class="text-yellow-400 font-semibold" id="seat-charges-amount">
+                                        HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?>
+                                    </span>
                                 </div>
+                                <input type="hidden" name="step_data[selected_seats]" id="selected-seats-input"
+                                    value="<?= htmlspecialchars(json_encode($selected_seats)) ?>">
+                                <input type="hidden" name="step_data[seat_charges]" id="seat-charges-input"
+                                    value="<?= $_SESSION['payment_data']['seat_charges'] ?? 0 ?>">
                             </div>
-                        <?php endif; ?>
+                        <?php
+                            break;
 
-                        <div class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label class="block text-gray-300 mb-2">Street Address</label>
-                                    <input type="text" name="step_data[billing_address][street]"
-                                        value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street'] ?? ($user['address'] ?? '')) ?>"
-                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                    <div class="error-message" id="street_error">Please enter a valid street address</div>
+                        case 5: ?>
+                            <!-- Step 5: Confirmation -->
+                            <h2 class="text-2xl font-bold mb-6">Confirm Your Booking</h2>
+                            <div class="space-y-6">
+                                <!-- Coupon Section -->
+                                <div class="coupon-section">
+                                    <h3 class="text-xl font-bold text-blue-900 mb-4">Apply Coupon Code</h3>
+
+                                    <?php if (isset($_SESSION['payment_data']['applied_coupon'])):
+                                        $applied_coupon = $_SESSION['payment_data']['applied_coupon'];
+                                        $discount_amount = $_SESSION['payment_data']['discount_amount'] ?? 0;
+                                    ?>
+                                        <div class="applied-coupon">
+                                            <div class="flex justify-between items-center">
+                                                <div>
+                                                    <h4 class="font-bold">Coupon Applied</h4>
+                                                    <p class="text-sm"><?= htmlspecialchars($applied_coupon['description']) ?></p>
+                                                    <p class="text-sm font-mono">Code: <?= htmlspecialchars($applied_coupon['code']) ?></p>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="font-bold text-lg">-HKD $<?= number_format($discount_amount, 2) ?></p>
+                                                    <form method="POST" class="inline">
+                                                        <input type="hidden" name="action" value="remove_coupon">
+                                                        <button type="submit" class="coupon-btn remove text-sm mt-2">
+                                                            Remove
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <form method="POST" class="coupon-input-group">
+                                            <input type="hidden" name="action" value="apply_coupon">
+                                            <input type="text" name="coupon_code" class="coupon-input"
+                                                placeholder="Enter coupon code (e.g., WELCOME15)"
+                                                value="<?= htmlspecialchars($_POST['coupon_code'] ?? '') ?>"
+                                                required>
+                                            <button type="submit" class="coupon-btn">Apply Coupon</button>
+                                        </form>
+                                        <p class="text-blue-900 text-sm">
+                                            <i data-feather="info" class="w-4 h-4 inline mr-1"></i>
+                                            New users can use code <strong>WELCOME15</strong> for 15% off first flight!
+                                        </p>
+                                    <?php endif; ?>
                                 </div>
-                                <div>
-                                    <label class="block text-gray-300 mb-2">City</label>
-                                    <input type="text" name="step_data[billing_address][city]"
-                                        value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city'] ?? ($user['city_name'] ?? '')) ?>"
-                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                    <div class="error-message" id="city_error">Please enter a valid city</div>
-                                </div>
-                                <div>
-                                    <label class="block text-gray-300 mb-2">State/Province</label>
-                                    <input type="text" name="step_data[billing_address][state]" id="billing_state"
-                                        value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state'] ?? ($user['state_name'] ?? '')) ?>"
-                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                    <div class="error-message" id="state_error">Please enter a state/province</div>
-                                </div>
-                                <div>
-                                    <label class="block text-gray-300 mb-2">ZIP/Postal Code</label>
-                                    <input type="text" name="step_data[billing_address][zip]"
-                                        value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip'] ?? ($user['postal_code'] ?? '')) ?>"
-                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                    <div class="error-message" id="zip_error">Please enter a valid ZIP/postal code</div>
-                                </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-gray-300 mb-2">Country</label>
-                                    <input type="text" name="step_data[billing_address][country]"
-                                        value="<?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country'] ?? ($user['country_name'] ?? '')) ?>"
-                                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white" required>
-                                    <div class="error-message" id="country_error">Please enter a valid country</div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php
-                        break;
 
-                    case 3: ?>
-                        <!-- Step 3: Payment Method -->
-                        <h2 class="text-2xl font-bold mb-6">Payment Method</h2>
-                        <div class="space-y-4">
-                            <div class="bg-yellow-900 border border-yellow-700 text-yellow-200 px-4 py-3 rounded mb-4">
-                                <strong>Demo Notice:</strong> This is a simulation. No real payment will be processed.
-                            </div>
-
-                            <div class="space-y-3">
-                                <label class="flex items-center space-x-3 p-4 border border-gray-600 rounded hover:bg-gray-800 cursor-pointer">
-                                    <input type="radio" name="step_data[payment_method]" value="credit_card"
-                                        <?= ($_SESSION['payment_data']['payment_method'] ?? '') === 'credit_card' ? 'checked' : '' ?> class="text-yellow-500" required>
-                                    <i data-feather="credit-card" class="text-gray-400"></i>
-                                    <span>Credit Card</span>
-                                </label>
-
-                                <label class="flex items-center space-x-3 p-4 border border-gray-600 rounded hover:bg-gray-800 cursor-pointer">
-                                    <input type="radio" name="step_data[payment_method]" value="debit_card"
-                                        <?= ($_SESSION['payment_data']['payment_method'] ?? '') === 'debit_card' ? 'checked' : '' ?> class="text-yellow-500">
-                                    <i data-feather="credit-card" class="text-gray-400"></i>
-                                    <span>Debit Card</span>
-                                </label>
-
-                                <label class="flex items-center space-x-3 p-4 border border-gray-600 rounded hover:bg-gray-800 cursor-pointer">
-                                    <input type="radio" name="step_data[payment_method]" value="paypal"
-                                        <?= ($_SESSION['payment_data']['payment_method'] ?? '') === 'paypal' ? 'checked' : '' ?> class="text-yellow-500">
-                                    <i data-feather="dollar-sign" class="text-gray-400"></i>
-                                    <span>PayPal</span>
-                                </label>
-                            </div>
-                            <div class="error-message" id="payment_error">Please select a payment method</div>
-
-                            <!-- Credit Card Details (shown only when credit/debit card is selected) -->
-                            <div id="card-details" class="mt-4 p-4 bg-gray-800 rounded-lg hidden">
-                                <h3 class="text-lg font-semibold mb-4">Card Details</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Card Number</label>
-                                        <input type="text" id="card_number"
-                                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                                            placeholder="1234 5678 9012 3456" maxlength="19">
-                                        <div class="error-message" id="card_number_error">Please enter a valid card number</div>
+                                <!-- Flight Summary -->
+                                <?php if (isset($_SESSION['payment_data']['flight_details'])):
+                                    $flight = $_SESSION['payment_data']['flight_details'];
+                                ?>
+                                    <div class="bg-gray-800 p-6 rounded">
+                                        <h3 class="text-lg font-semibold mb-4">Flight Details</h3>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <p class="text-gray-400">Airline</p>
+                                                <p class="text-white font-semibold"><?= htmlspecialchars($flight['airline_name']) ?> (<?= htmlspecialchars($flight['airline_code']) ?>)</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-400">Flight Number</p>
+                                                <p class="text-white font-semibold"><?= htmlspecialchars($flight['flight_number']) ?></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-400">Route</p>
+                                                <p class="text-white font-semibold"><?= htmlspecialchars($flight['origin']) ?> → <?= htmlspecialchars($flight['destination']) ?></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-400">Travel Dates</p>
+                                                <p class="text-white font-semibold">
+                                                    <?= date('M j, Y', strtotime($flight['departure_date'])) ?> - <?= date('M j, Y', strtotime($flight['return_date'])) ?>
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-400">Passengers</p>
+                                                <p class="text-white font-semibold"><?= $passengers ?> <?= $passengers > 1 ? 'travelers' : 'traveler' ?></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-400">Flight Type</p>
+                                                <p class="text-white font-semibold"><?= ucfirst(str_replace('_', ' ', $flight_type)) ?></p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Cardholder Name</label>
-                                        <input type="text" id="card_name"
-                                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                                            placeholder="John Doe">
-                                        <div class="error-message" id="card_name_error">Please enter cardholder name</div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">Expiry Date</label>
-                                        <input type="text" id="card_expiry"
-                                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                                            placeholder="MM/YY" maxlength="5">
-                                        <div class="error-message" id="card_expiry_error">Please enter a valid expiry date</div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-gray-300 mb-2">CVV</label>
-                                        <input type="text" id="card_cvv"
-                                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                                            placeholder="123" maxlength="4">
-                                        <div class="error-message" id="card_cvv_error">Please enter a valid CVV</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php
-                        break;
+                                <?php endif; ?>
 
-                    case 4: ?>
-                        <!-- Step 4: Seat Selection -->
-                        <h2 class="text-2xl font-bold mb-6">Seat Selection</h2>
-                        <div class="bg-blue-900 border border-blue-700 text-blue-200 px-4 py-3 rounded mb-6">
-                            <strong>Instructions:</strong> Please select <?= $passengers ?> seat(s) for your flight.
-                            Premium seats (dark yellow) cost an extra HKD 50 per seat.
-                        </div>
-
-                        <div class="airplane-cabin">
-                            <div class="cabin-label">Business Class (Rows 1-2)</div>
-                            <div class="seat-map-container">
+                                <!-- Selected Seats -->
                                 <?php
-                                // Handle selected seats properly to avoid array error
+                                // Handle selected seats properly
                                 $selected_seats = $_SESSION['payment_data']['selected_seats'] ?? [];
                                 if (is_string($selected_seats)) {
                                     $selected_seats = json_decode($selected_seats, true) ?? [];
@@ -1191,328 +1387,149 @@ $seat_map = generateSeatMap();
                                 if (!is_array($selected_seats)) {
                                     $selected_seats = [];
                                 }
+                                if (!empty($selected_seats)): ?>
+                                    <div class="bg-gray-800 p-6 rounded">
+                                        <h3 class="text-lg font-semibold mb-4">Selected Seats</h3>
+                                        <p class="text-white font-semibold"><?= implode(', ', $selected_seats) ?></p>
+                                    </div>
+                                <?php endif; ?>
 
-                                for ($row = 1; $row <= 2; $row++): ?>
-                                    <?php for ($col = 0; $col < 6; $col++): ?>
-                                        <?php
-                                        $seat = $seat_map[($row - 1) * 6 + $col];
-                                        $seat_class = 'seat ' . $seat['type'];
-                                        if (in_array($seat['number'], $selected_seats)) {
-                                            $seat_class .= ' selected';
-                                        }
-                                        ?>
-                                        <div class="<?= $seat_class ?>"
-                                            data-seat="<?= $seat['number'] ?>"
-                                            data-price="<?= $seat['price'] ?>"
-                                            onclick="selectSeat(this)">
-                                            <?= $seat['number'] ?>
-                                        </div>
-                                    <?php endfor; ?>
-                                <?php endfor; ?>
-                            </div>
-
-                            <div class="cabin-label mt-8">Economy Class (Rows 3-10)</div>
-                            <div class="seat-map-container">
-                                <?php for ($row = 3; $row <= 10; $row++): ?>
-                                    <?php for ($col = 0; $col < 6; $col++): ?>
-                                        <?php
-                                        $seat = $seat_map[($row - 1) * 6 + $col];
-                                        $seat_class = 'seat ' . $seat['type'];
-                                        if (in_array($seat['number'], $selected_seats)) {
-                                            $seat_class .= ' selected';
-                                        }
-                                        ?>
-                                        <div class="<?= $seat_class ?>"
-                                            data-seat="<?= $seat['number'] ?>"
-                                            data-price="<?= $seat['price'] ?>"
-                                            onclick="selectSeat(this)">
-                                            <?= $seat['number'] ?>
-                                        </div>
-                                    <?php endfor; ?>
-                                <?php endfor; ?>
-                            </div>
-                        </div>
-
-                        <!-- Seat Legend -->
-                        <div class="flex justify-center space-x-6 mt-6 text-sm">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-4 h-4 bg-yellow-500 rounded"></div>
-                                <span class="text-gray-300">Available (HKD 0)</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-4 h-4 bg-yellow-700 rounded"></div>
-                                <span class="text-gray-300">Premium (HKD 50)</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-4 h-4 bg-green-500 rounded"></div>
-                                <span class="text-gray-300">Selected</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-4 h-4 bg-gray-600 rounded relative">
-                                    <span class="absolute inset-0 flex items-center justify-center text-red-500 text-xs">✕</span>
+                                <!-- Passenger Info -->
+                                <div class="bg-gray-800 p-6 rounded">
+                                    <h3 class="text-lg font-semibold mb-4">Passenger Information</h3>
+                                    <?php if (isset($_SESSION['payment_data']['passenger_info'])): ?>
+                                        <?php foreach ($_SESSION['payment_data']['passenger_info'] as $index => $passenger): ?>
+                                            <div class="mb-4 pb-4 border-b border-gray-700 last:border-b-0 last:mb-0 last:pb-0">
+                                                <h4 class="font-semibold text-yellow-400 mb-2">Passenger <?= substr($index, -1) ?></h4>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                                    <div><span class="text-gray-400">Name:</span> <span class="text-white"><?= htmlspecialchars($passenger['first_name'] ?? '') ?> <?= htmlspecialchars($passenger['last_name'] ?? '') ?></span></div>
+                                                    <?php if (isset($passenger['email'])): ?>
+                                                        <div><span class="text-gray-400">Email:</span> <span class="text-white"><?= htmlspecialchars($passenger['email']) ?></span></div>
+                                                    <?php endif; ?>
+                                                    <?php if (isset($passenger['phone'])): ?>
+                                                        <div><span class="text-gray-400">Phone:</span> <span class="text-white"><?= htmlspecialchars($passenger['phone']) ?></span></div>
+                                                    <?php endif; ?>
+                                                    <div><span class="text-gray-400">Gender:</span> <span class="text-white"><?= ucfirst($passenger['gender'] ?? '') ?></span></div>
+                                                    <?php if (isset($passenger['dob'])): ?>
+                                                        <div><span class="text-gray-400">Date of Birth:</span> <span class="text-white"><?= date('M j, Y', strtotime($passenger['dob'])) ?></span></div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <span class="text-gray-300">Occupied</span>
-                            </div>
-                        </div>
 
-                        <!-- Selected Seats Summary -->
-                        <div class="mt-6 p-4 bg-gray-800 rounded-lg">
-                            <h3 class="font-semibold mb-3">Selected Seats</h3>
-                            <div id="selected-seats-list" class="text-gray-300 mb-2">
-                                <?php
-                                echo !empty($selected_seats) ? implode(', ', $selected_seats) : 'No seats selected';
-                                ?>
+                                <!-- Billing Address -->
+                                <div class="bg-gray-800 p-6 rounded">
+                                    <h3 class="text-lg font-semibold mb-4">Billing Address</h3>
+                                    <?php if (isset($_SESSION['payment_data']['billing_address'])): ?>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                            <div><span class="text-gray-400">Street:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street']) ?></span></div>
+                                            <div><span class="text-gray-400">City:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city']) ?></span></div>
+                                            <div><span class="text-gray-400">State/Province:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state']) ?></span></div>
+                                            <div><span class="text-gray-400">ZIP/Postal Code:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip']) ?></span></div>
+                                            <div class="md:col-span-2"><span class="text-gray-400">Country:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country']) ?></span></div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Payment Method -->
+                                <div class="bg-gray-800 p-6 rounded">
+                                    <h3 class="text-lg font-semibold mb-4">Payment Method</h3>
+                                    <p class="text-white"><?= ucfirst(str_replace('_', ' ', $_SESSION['payment_data']['payment_method'] ?? '')) ?></p>
+                                </div>
+
+                                <!-- Order Summary -->
+                                <div class="bg-gray-800 p-6 rounded">
+                                    <h3 class="text-lg font-semibold mb-4">Order Summary</h3>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-300">Flight Cost (<?= $passengers ?> <?= $passengers > 1 ? 'travelers' : 'traveler' ?>):</span>
+                                            <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['base_amount'] ?? 0, 2) ?></span>
+                                        </div>
+                                        <?php if (isset($_SESSION['payment_data']['tax_amount']) && $_SESSION['payment_data']['tax_amount'] > 0): ?>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">Taxes & Fees (3%):</span>
+                                                <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['tax_amount'] ?? 0, 2) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (($_SESSION['payment_data']['seat_charges'] ?? 0) > 0): ?>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">Seat Selection Charges:</span>
+                                                <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (isset($_SESSION['payment_data']['discount_amount']) && $_SESSION['payment_data']['discount_amount'] > 0): ?>
+                                            <div class="flex justify-between text-green-400">
+                                                <span class="text-gray-300">Coupon Discount:</span>
+                                                <span class="font-semibold">-HKD $<?= number_format($_SESSION['payment_data']['discount_amount'] ?? 0, 2) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
+                                            <?php
+                                            $final_total = (($_SESSION['payment_data']['base_amount'] ?? 0) + ($_SESSION['payment_data']['tax_amount'] ?? 0) + ($_SESSION['payment_data']['seat_charges'] ?? 0)) - ($_SESSION['payment_data']['discount_amount'] ?? 0);
+                                            if ($final_total < 0) $final_total = 0;
+                                            ?>
+                                            <span class="text-white">Total Amount:</span>
+                                            <span class="text-yellow-400">HKD $<?= number_format($final_total, 2) ?></span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-400">Extra Charges:</span>
-                                <span class="text-yellow-400 font-semibold" id="seat-charges-amount">
-                                    HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?>
-                                </span>
-                            </div>
-                            <input type="hidden" name="step_data[selected_seats]" id="selected-seats-input"
-                                value="<?= htmlspecialchars(json_encode($selected_seats)) ?>">
-                            <input type="hidden" name="step_data[seat_charges]" id="seat-charges-input"
-                                value="<?= $_SESSION['payment_data']['seat_charges'] ?? 0 ?>">
-                        </div>
                     <?php
-                        break;
+                            break;
+                    }
+                    ?>
 
-                    case 5: ?>
-                        <!-- Step 5: Confirmation -->
-                        <h2 class="text-2xl font-bold mb-6">Confirm Your Booking</h2>
-                        <div class="space-y-6">
-                            <!-- Coupon Section -->
-                            <div class="coupon-section">
-                                <h3 class="text-xl font-bold text-blue-900 mb-4">Apply Coupon Code</h3>
-                                
-                                <?php if (isset($_SESSION['payment_data']['applied_coupon'])): 
-                                    $applied_coupon = $_SESSION['payment_data']['applied_coupon'];
-                                    $discount_amount = $_SESSION['payment_data']['discount_amount'] ?? 0;
-                                ?>
-                                    <div class="applied-coupon">
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <h4 class="font-bold">Coupon Applied</h4>
-                                                <p class="text-sm"><?= htmlspecialchars($applied_coupon['description']) ?></p>
-                                                <p class="text-sm font-mono">Code: <?= htmlspecialchars($applied_coupon['code']) ?></p>
-                                            </div>
-                                            <div class="text-right">
-                                                <p class="font-bold text-lg">-HKD $<?= number_format($discount_amount, 2) ?></p>
-                                                <form method="POST" class="inline">
-                                                    <input type="hidden" name="action" value="remove_coupon">
-                                                    <button type="submit" class="coupon-btn remove text-sm mt-2">
-                                                        Remove
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php else: ?>
-                                    <form method="POST" class="coupon-input-group">
-                                        <input type="hidden" name="action" value="apply_coupon">
-                                        <input type="text" name="coupon_code" class="coupon-input" 
-                                               placeholder="Enter coupon code (e.g., WELCOME15)" 
-                                               value="<?= htmlspecialchars($_POST['coupon_code'] ?? '') ?>"
-                                               required>
-                                        <button type="submit" class="coupon-btn">Apply Coupon</button>
-                                    </form>
-                                    <p class="text-blue-900 text-sm">
-                                        <i data-feather="info" class="w-4 h-4 inline mr-1"></i>
-                                        New users can use code <strong>WELCOME15</strong> for 15% off first flight!
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Flight Summary -->
-                            <?php if (isset($_SESSION['payment_data']['flight_details'])):
-                                $flight = $_SESSION['payment_data']['flight_details'];
-                            ?>
-                                <div class="bg-gray-800 p-6 rounded">
-                                    <h3 class="text-lg font-semibold mb-4">Flight Details</h3>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <p class="text-gray-400">Airline</p>
-                                            <p class="text-white font-semibold"><?= htmlspecialchars($flight['airline_name']) ?> (<?= htmlspecialchars($flight['airline_code']) ?>)</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400">Flight Number</p>
-                                            <p class="text-white font-semibold"><?= htmlspecialchars($flight['flight_number']) ?></p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400">Route</p>
-                                            <p class="text-white font-semibold"><?= htmlspecialchars($flight['origin']) ?> → <?= htmlspecialchars($flight['destination']) ?></p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400">Travel Dates</p>
-                                            <p class="text-white font-semibold">
-                                                <?= date('M j, Y', strtotime($flight['departure_date'])) ?> - <?= date('M j, Y', strtotime($flight['return_date'])) ?>
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400">Passengers</p>
-                                            <p class="text-white font-semibold"><?= $passengers ?> <?= $passengers > 1 ? 'travelers' : 'traveler' ?></p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400">Flight Type</p>
-                                            <p class="text-white font-semibold"><?= ucfirst(str_replace('_', ' ', $flight_type)) ?></p>
-                                        </div>
-                                    </div>
-                                </div>
+                    <!-- Navigation Buttons -->
+                    <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
+                        <?php if ($step > 1): ?>
+                            <?php if ($step < 5): ?>
+                                <button type="submit" name="action" value="previous_step"
+                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                                    <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
+                                    Previous
+                                </button>
+                            <?php else: ?>
+                                <a href="payment.php?step=<?= $step - 1 ?>" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                                    <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
+                                    Previous
+                                </a>
                             <?php endif; ?>
+                        <?php else: ?>
+                            <div></div> <!-- Empty spacer -->
+                        <?php endif; ?>
 
-                            <!-- Selected Seats -->
-                            <?php
-                            // Handle selected seats properly
-                            $selected_seats = $_SESSION['payment_data']['selected_seats'] ?? [];
-                            if (is_string($selected_seats)) {
-                                $selected_seats = json_decode($selected_seats, true) ?? [];
-                            }
-                            if (!is_array($selected_seats)) {
-                                $selected_seats = [];
-                            }
-                            if (!empty($selected_seats)): ?>
-                                <div class="bg-gray-800 p-6 rounded">
-                                    <h3 class="text-lg font-semibold mb-4">Selected Seats</h3>
-                                    <p class="text-white font-semibold"><?= implode(', ', $selected_seats) ?></p>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Passenger Info -->
-                            <div class="bg-gray-800 p-6 rounded">
-                                <h3 class="text-lg font-semibold mb-4">Passenger Information</h3>
-                                <?php if (isset($_SESSION['payment_data']['passenger_info'])): ?>
-                                    <?php foreach ($_SESSION['payment_data']['passenger_info'] as $index => $passenger): ?>
-                                        <div class="mb-4 pb-4 border-b border-gray-700 last:border-b-0 last:mb-0 last:pb-0">
-                                            <h4 class="font-semibold text-yellow-400 mb-2">Passenger <?= substr($index, -1) ?></h4>
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                                <div><span class="text-gray-400">Name:</span> <span class="text-white"><?= htmlspecialchars($passenger['first_name'] ?? '') ?> <?= htmlspecialchars($passenger['last_name'] ?? '') ?></span></div>
-                                                <?php if (isset($passenger['email'])): ?>
-                                                    <div><span class="text-gray-400">Email:</span> <span class="text-white"><?= htmlspecialchars($passenger['email']) ?></span></div>
-                                                <?php endif; ?>
-                                                <?php if (isset($passenger['phone'])): ?>
-                                                    <div><span class="text-gray-400">Phone:</span> <span class="text-white"><?= htmlspecialchars($passenger['phone']) ?></span></div>
-                                                <?php endif; ?>
-                                                <div><span class="text-gray-400">Gender:</span> <span class="text-white"><?= ucfirst($passenger['gender'] ?? '') ?></span></div>
-                                                <?php if (isset($passenger['dob'])): ?>
-                                                    <div><span class="text-gray-400">Date of Birth:</span> <span class="text-white"><?= date('M j, Y', strtotime($passenger['dob'])) ?></span></div>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Billing Address -->
-                            <div class="bg-gray-800 p-6 rounded">
-                                <h3 class="text-lg font-semibold mb-4">Billing Address</h3>
-                                <?php if (isset($_SESSION['payment_data']['billing_address'])): ?>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                        <div><span class="text-gray-400">Street:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['street']) ?></span></div>
-                                        <div><span class="text-gray-400">City:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['city']) ?></span></div>
-                                        <div><span class="text-gray-400">State/Province:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['state']) ?></span></div>
-                                        <div><span class="text-gray-400">ZIP/Postal Code:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['zip']) ?></span></div>
-                                        <div class="md:col-span-2"><span class="text-gray-400">Country:</span> <span class="text-white"><?= htmlspecialchars($_SESSION['payment_data']['billing_address']['country']) ?></span></div>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Payment Method -->
-                            <div class="bg-gray-800 p-6 rounded">
-                                <h3 class="text-lg font-semibold mb-4">Payment Method</h3>
-                                <p class="text-white"><?= ucfirst(str_replace('_', ' ', $_SESSION['payment_data']['payment_method'] ?? '')) ?></p>
-                            </div>
-
-                            <!-- Order Summary -->
-                            <div class="bg-gray-800 p-6 rounded">
-                                <h3 class="text-lg font-semibold mb-4">Order Summary</h3>
-                                <div class="space-y-2">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-300">Flight Cost (<?= $passengers ?> <?= $passengers > 1 ? 'travelers' : 'traveler' ?>):</span>
-                                        <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['base_amount'] ?? 0, 2) ?></span>
-                                    </div>
-                                    <?php if (isset($_SESSION['payment_data']['tax_amount']) && $_SESSION['payment_data']['tax_amount'] > 0): ?>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-300">Taxes & Fees (3%):</span>
-                                            <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['tax_amount'] ?? 0, 2) ?></span>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (($_SESSION['payment_data']['seat_charges'] ?? 0) > 0): ?>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-300">Seat Selection Charges:</span>
-                                            <span class="text-white">HKD $<?= number_format($_SESSION['payment_data']['seat_charges'] ?? 0, 2) ?></span>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (isset($_SESSION['payment_data']['discount_amount']) && $_SESSION['payment_data']['discount_amount'] > 0): ?>
-                                        <div class="flex justify-between text-green-400">
-                                            <span class="text-gray-300">Coupon Discount:</span>
-                                            <span class="font-semibold">-HKD $<?= number_format($_SESSION['payment_data']['discount_amount'] ?? 0, 2) ?></span>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="flex justify-between font-bold text-lg border-t border-gray-600 pt-3 mt-2">
-                                        <?php
-                                        $final_total = (($_SESSION['payment_data']['base_amount'] ?? 0) + ($_SESSION['payment_data']['tax_amount'] ?? 0) + ($_SESSION['payment_data']['seat_charges'] ?? 0)) - ($_SESSION['payment_data']['discount_amount'] ?? 0);
-                                        if ($final_total < 0) $final_total = 0;
-                                        ?>
-                                        <span class="text-white">Total Amount:</span>
-                                        <span class="text-yellow-400">HKD $<?= number_format($final_total, 2) ?></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                <?php
-                        break;
-                }
-                ?>
-
-                <!-- Navigation Buttons -->
-                <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
-                    <?php if ($step > 1): ?>
                         <?php if ($step < 5): ?>
-                            <button type="submit" name="action" value="previous_step"
-                                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
-                                <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
-                                Previous
+                            <button type="submit" name="action" value="save_step"
+                                class="bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
+                                Next
+                                <i data-feather="arrow-right" class="w-4 h-4 inline ml-2"></i>
                             </button>
                         <?php else: ?>
-                            <a href="payment.php?step=<?= $step - 1 ?>" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
-                                <i data-feather="arrow-left" class="w-4 h-4 inline mr-2"></i>
-                                Previous
-                            </a>
+                            <!-- Separate form for final payment processing -->
+                            <form method="POST" id="final-payment-form" action="payment.php?step=5">
+                                <input type="hidden" name="action" value="process_payment">
+                                <button type="submit" id="complete-booking"
+                                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded transition-colors">
+                                    <div class="loading-spinner" id="loading-spinner"></div>
+                                    <span id="button-text">Complete Booking</span>
+                                    <i data-feather="check" class="w-4 h-4 inline ml-2"></i>
+                                </button>
+                            </form>
                         <?php endif; ?>
-                    <?php else: ?>
-                        <div></div> <!-- Empty spacer -->
-                    <?php endif; ?>
+                    </div>
 
                     <?php if ($step < 5): ?>
-                        <button type="submit" name="action" value="save_step"
-                            class="bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
-                            Next
-                            <i data-feather="arrow-right" class="w-4 h-4 inline ml-2"></i>
-                        </button>
-                    <?php else: ?>
-                        <!-- Separate form for final payment processing -->
-                        <form method="POST" id="final-payment-form" action="payment.php?step=5">
-                            <input type="hidden" name="action" value="process_payment">
-                            <button type="submit" id="complete-booking"
-                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded transition-colors">
-                                <div class="loading-spinner" id="loading-spinner"></div>
-                                <span id="button-text">Complete Booking</span>
-                                <i data-feather="check" class="w-4 h-4 inline ml-2"></i>
-                            </button>
-                        </form>
-                    <?php endif; ?>
-                </div>
-
-                <?php if ($step < 5): ?>
                     </form>
                 <?php endif; ?>
             <?php else: ?>
                 <!-- Step 6: Receipt -->
                 <?= displayIntegratedReceipt(); ?>
-                
+
                 <div class="flex justify-center mt-8 no-print">
-                    <a href="dashboard.php?view=bookings" 
-                       class="bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
+                    <a href="dashboard.php?view=bookings"
+                        class="bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 px-6 rounded transition-colors">
                         Go to Dashboard
                     </a>
                 </div>
@@ -1895,7 +1912,6 @@ $seat_map = generateSeatMap();
                 errorElement.style.display = 'none';
             }
         });
-
     </script>
 </body>
 
