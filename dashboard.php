@@ -976,7 +976,7 @@ function generatePrintableTicket($booking)
                         <h2 class="text-xl font-bold text-white mb-4">Quick Actions</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <a href="index.php" class="bg-blue-900 hover:bg-blue-800 p-4 rounded-lg text-center transition-colors">
-                                <i data-feather="plane" class="w-8 h-8 text-blue-300 mx-auto mb-2"></i>
+                                <i data-feather="send" class="w-8 h-8 text-blue-300 mx-auto mb-2"></i>
                                 <span class="font-medium text-white">Book Flights</span>
                             </a>
                             <a href="dashboard.php?view=wishlist" class="bg-green-900 hover:bg-green-800 p-4 rounded-lg text-center transition-colors">

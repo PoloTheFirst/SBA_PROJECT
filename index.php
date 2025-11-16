@@ -293,8 +293,9 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                 <div class="flex justify-between h-16 items-center">
                     <!-- Logo -->
                     <div class="flex items-center">
-                        <a href="index.php" class="text-2xl font-bold text-white flex items-center">
-                            <i data-feather="navigation" class="mr-2"></i>TravelGO Orbit
+                        <a href="index.php" class="flex items-center space-x-2">
+                            <i data-feather="navigation" class="text-yellow-400"></i>
+                            <span class="text-xl font-bold">TravelGO Orbit</span>
                         </a>
                     </div>
 
