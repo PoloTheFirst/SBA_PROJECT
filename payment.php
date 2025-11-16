@@ -63,10 +63,8 @@ if (!isset($_SESSION['payment_data'])) {
 $step = $_GET['step'] ?? 1;
 $flight_id = $_GET['flight_id'] ?? ($_SESSION['payment_data']['flight_id'] ?? null);
 $flight_type = $_GET['flight_type'] ?? ($_SESSION['payment_data']['flight_type'] ?? 'one_way');
-$passengers = $_GET['passengers'] ?? ($_SESSION['payment_data']['passengers'] ?? 1);
+$passengers = $_GET['passengers'] ?? ($_SESSION['payment_data']['passengers'] ?? null);
 
-// Get flight details if available
-$flight_details = null;
 if ($flight_id && $flight_type === 'round_trip') {
     $flight_stmt = $pdo->prepare("SELECT * FROM round_trip_flights WHERE id = ?");
     $flight_stmt->execute([$flight_id]);

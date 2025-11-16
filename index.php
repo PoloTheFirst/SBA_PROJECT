@@ -2,7 +2,7 @@
 // Start session at the very beginning
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
-    
+
     // Security headers - moved from connection.php
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
@@ -82,12 +82,15 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
         }
 
         .btn-primary {
-            background-color: #f59e0b;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: #1e3a8a;
+            transition: all 0.3s ease;
         }
 
         .btn-primary:hover {
-            background-color: #d97706;
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
         }
 
         .text-primary {
@@ -269,6 +272,15 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
         #from-dropdown::-webkit-scrollbar-thumb:hover,
         #to-dropdown::-webkit-scrollbar-thumb:hover {
             background: #9CA3AF;
+        }
+
+        .btn-primary {
+            background-color: #f59e0b;
+            color: #1e3a8a;
+        }
+
+        .btn-primary:hover {
+            background-color: #d97706;
         }
     </style>
 </head>
@@ -487,32 +499,32 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                         <div>
                             <label for="passengers" class="block text-white text-sm font-medium mb-2">Travelers</label>
                             <div class="relative">
-                                <i data-feather="users" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300"></i>
-                                <select id="passengers" name="passengers" class="w-full pl-10 pr-4 py-3 rounded-lg bg-white/90 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none text-gray-800">
+                                <i data-feather="users" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-400"></i>
+                                <select id="passengers" name="passengers" class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent appearance-none text-white transition-colors hover:bg-gray-700 font-['Poppins']">
                                     <option value="1">1 Adult</option>
                                     <option value="2">2 Adults</option>
                                     <option value="3">3 Adults</option>
                                     <option value="4">4 Adults</option>
                                     <option value="5">Family</option>
                                 </select>
-                                <i data-feather="chevron-down" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                                <i data-feather="chevron-down" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                             </div>
                         </div>
                         <div>
                             <label for="class" class="block text-white text-sm font-medium mb-2">Class</label>
                             <div class="relative">
-                                <i data-feather="briefcase" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300"></i>
-                                <select id="class" name="class" class="w-full pl-10 pr-4 py-3 rounded-lg bg-white/90 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none text-gray-800">
+                                <i data-feather="briefcase" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-400"></i>
+                                <select id="class" name="class" class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent appearance-none text-white transition-colors hover:bg-gray-700 font-['Poppins']">
                                     <option value="economy">Economy</option>
                                     <option value="premium">Premium Economy</option>
                                     <option value="business">Business</option>
                                     <option value="first">First Class</option>
                                 </select>
-                                <i data-feather="chevron-down" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                                <i data-feather="chevron-down" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                             </div>
                         </div>
                         <div class="md:col-span-2 flex items-end">
-                            <button type="submit" class="btn-primary font-bold py-3 px-8 rounded-lg transition-colors w-full text-lg">
+                            <button type="submit" class="btn-primary font-bold py-3 px-8 rounded-lg transition-colors w-full text-lg hover:shadow-lg transform hover:-translate-y-1 font-['Poppins']">
                                 Search Flights <i data-feather="search" class="inline ml-2"></i>
                             </button>
                         </div>
@@ -538,10 +550,10 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
         </div>
 
         <!-- Promo Video Section -->
-        <div class="mt-16">
+        <div class="mt-16 px-4">
             <h3 class="text-2xl font-bold text-white mb-6 text-center">Explore TravelGO Orbit</h3>
-            <div class="video-container mx-auto max-w-4xl">
-                <video controls class="w-full rounded-lg shadow-lg">
+            <div class="video-container mx-auto max-w-2xl lg:max-w-4xl">
+                <video controls class="w-full h-auto rounded-lg shadow-lg" style="max-height: 400px;">
                     <source src="./assets/TravelGO_Orbits_Promo_Video.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
@@ -721,161 +733,191 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
         </footer>
     </div>
 
-    <script>
-        // Initialize Vanta.js globe background with dark theme
-        VANTA.GLOBE({
-            el: "#vanta-bg",
-            mouseControls: true,
-            touchControls: true,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00,
-            color: 0x3b82f6,
-            backgroundColor: 0x111827,
-            size: 0.8
+  <script>
+    // Initialize Vanta.js globe background with dark theme
+    VANTA.GLOBE({
+        el: "#vanta-bg",
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x3b82f6,
+        backgroundColor: 0x111827,
+        size: 0.8
+    });
+
+    // Initialize feather icons
+    feather.replace();
+
+    // Profile Dropdown Functionality
+    function initProfileDropdown(toggleId, menuId, containerId) {
+        const toggle = document.getElementById(toggleId);
+        const menu = document.getElementById(menuId);
+        const container = document.getElementById(containerId);
+
+        if (!toggle || !menu) return;
+
+        // Toggle dropdown
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', !isExpanded);
+            menu.classList.toggle('active', !isExpanded);
         });
 
-        // Initialize feather icons
-        feather.replace();
+        // Close on escape key
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                toggle.setAttribute('aria-expanded', 'false');
+                menu.classList.remove('active');
+            }
+        });
 
-        // Profile Dropdown Functionality
-        function initProfileDropdown(toggleId, menuId, containerId) {
-            const toggle = document.getElementById(toggleId);
-            const menu = document.getElementById(menuId);
-            const container = document.getElementById(containerId);
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) {
+                toggle.setAttribute('aria-expanded', 'false');
+                menu.classList.remove('active');
+            }
+        });
+    }
 
-            if (!toggle || !menu) return;
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        initProfileDropdown('profile-toggle', 'profile-menu', 'profile-dropdown-container');
+        initProfileDropdown('mobile-profile-toggle', 'mobile-profile-menu', 'mobile-profile-dropdown-container');
 
-            // Toggle dropdown
-            toggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                toggle.setAttribute('aria-expanded', !isExpanded);
-                menu.classList.toggle('active', !isExpanded);
-            });
-
-            // Close on escape key
-            toggle.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    toggle.setAttribute('aria-expanded', 'false');
-                    menu.classList.remove('active');
-                }
-            });
-
-            // Close when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!container.contains(e.target)) {
-                    toggle.setAttribute('aria-expanded', 'false');
-                    menu.classList.remove('active');
-                }
-            });
-
-            // Handle keyboard navigation in dropdown
-            const menuItems = menu.querySelectorAll('.profile-dropdown-item');
-            menuItems.forEach((item, index) => {
-                item.addEventListener('keydown', (e) => {
-                    if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        const nextItem = menuItems[index + 1] || menuItems[0];
-                        nextItem.focus();
-                    } else if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        const prevItem = menuItems[index - 1] || menuItems[menuItems.length - 1];
-                        prevItem.focus();
-                    } else if (e.key === 'Escape') {
-                        toggle.setAttribute('aria-expanded', 'false');
-                        menu.classList.remove('active');
-                        toggle.focus();
-                    }
-                });
-            });
+        // Format date for input fields
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
-        // Initialize both desktop and mobile dropdowns
-        document.addEventListener('DOMContentLoaded', function() {
-            initProfileDropdown('profile-toggle', 'profile-menu', 'profile-dropdown-container');
-            initProfileDropdown('mobile-profile-toggle', 'mobile-profile-menu', 'mobile-profile-dropdown-container');
+        // Trip type switch functionality
+        const tripButtons = document.querySelectorAll('.trip-switch');
+        const tripIndicator = document.getElementById('trip-indicator');
+        const returnContainer = document.getElementById('return-date-container');
+        const returnInput = document.getElementById('return');
+        const departureInput = document.getElementById('departure');
 
-            // Trip type switch functionality
-            const tripButtons = document.querySelectorAll('.trip-switch');
-            const tripIndicator = document.getElementById('trip-indicator');
-            const returnContainer = document.getElementById('return-date-container');
-            const returnInput = document.getElementById('return');
+        // Set initial dates
+        function initializeDates() {
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            
+            departureInput.value = formatDate(today);
+            returnInput.value = formatDate(nextWeek);
+            
+            // Set min dates to today
+            departureInput.min = formatDate(today);
+            returnInput.min = formatDate(today);
+        }
 
-            function updateTripType(tripType) {
-                tripButtons.forEach(btn => {
-                    btn.classList.remove('text-white', 'font-semibold');
-                    btn.classList.add('text-white');
-                });
-
-                const activeButton = document.querySelector(`[data-trip="${tripType}"]`);
-                activeButton.classList.remove('text-white');
-                activeButton.classList.add('text-white', 'font-semibold');
-
-                // Update hidden input
-                document.getElementById('trip_type').value = tripType;
-
-                // Move indicator and handle return date
-                if (tripType === 'round') {
-                    tripIndicator.style.transform = 'translateX(0)';
-                    returnContainer.style.display = 'block';
-                    returnInput.required = true;
-                    document.getElementById('search-form').action = 'search_results_roundtrip.php';
-                } else if (tripType === 'oneway') {
-                    tripIndicator.style.transform = 'translateX(100%)';
-                    returnContainer.style.display = 'none';
-                    returnInput.required = false;
-                    returnInput.value = '';
-                    document.getElementById('search-form').action = 'search_results.php';
-                } else {
-                    tripIndicator.style.transform = 'translateX(200%)';
-                    returnContainer.style.display = 'none';
-                    returnInput.required = false;
-                    returnInput.value = '';
-                    alert('Multi-city search coming soon!');
-                    document.getElementById('search-form').action = 'content_page/underdevelop.php';
-                }
-            }
-
-            tripButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    updateTripType(this.dataset.trip);
-                });
+        function updateTripType(tripType) {
+            tripButtons.forEach(btn => {
+                btn.classList.remove('text-white', 'font-semibold');
+                btn.classList.add('text-white');
             });
 
-            // Set default dates
-            const today = new Date();
-            const nextWeek = new Date();
-            nextWeek.setDate(today.getDate() + 7);
+            const activeButton = document.querySelector(`[data-trip="${tripType}"]`);
+            activeButton.classList.remove('text-white');
+            activeButton.classList.add('text-white', 'font-semibold');
 
-            function formatDate(date) {
-                return date.toISOString().split('T')[0];
+            // Update hidden input
+            document.getElementById('trip_type').value = tripType;
+
+            // Move indicator and handle return date
+            if (tripType === 'round') {
+                tripIndicator.style.transform = 'translateX(0)';
+                returnContainer.style.display = 'block';
+                returnInput.required = true;
+                document.getElementById('search-form').action = 'search_results_roundtrip.php';
+                
+                // Initialize dates if not set
+                if (!departureInput.value || !returnInput.value) {
+                    initializeDates();
+                }
+            } else if (tripType === 'oneway') {
+                tripIndicator.style.transform = 'translateX(100%)';
+                returnContainer.style.display = 'none';
+                returnInput.required = false;
+                returnInput.value = '';
+                alert('One-way search coming soon!');
+                document.getElementById('search-form').action = 'content_page/underdevelop.php';
+            } else {
+                tripIndicator.style.transform = 'translateX(200%)';
+                returnContainer.style.display = 'none';
+                returnInput.required = false;
+                returnInput.value = '';
+                alert('Multi-city search coming soon!');
+                document.getElementById('search-form').action = 'content_page/underdevelop.php';
             }
+        }
 
-            document.getElementById('departure').value = formatDate(nextWeek);
-            document.getElementById('departure').min = formatDate(today);
+        // Store the original gap when departure is first set
+        let dateGap = 7; // Default 7-day gap
 
-            const returnDate = new Date(nextWeek);
-            returnDate.setDate(nextWeek.getDate() + 4);
-            document.getElementById('return').value = formatDate(returnDate);
-            document.getElementById('return').min = formatDate(nextWeek);
-
-            // Initialize with round trip
-            updateTripType('round');
-
-            // Airport/City Search Functionality
-            function initLocationSearch() {
-                const fromInput = document.getElementById('from');
-                const toInput = document.getElementById('to');
-                const fromDropdown = document.getElementById('from-dropdown');
-                const toDropdown = document.getElementById('to-dropdown');
-
-                // Initialize search for both inputs
-                initSearchInput(fromInput, fromDropdown, 'Leaving from');
-                initSearchInput(toInput, toDropdown, 'Going to', true);
+        // Departure date change handler
+        departureInput.addEventListener('change', function() {
+            const tripType = document.getElementById('trip_type').value;
+            
+            if (this.value && tripType === 'round') {
+                const newDeparture = new Date(this.value);
+                
+                // Update return date to maintain the same gap
+                const newReturn = new Date(newDeparture);
+                newReturn.setDate(newDeparture.getDate() + dateGap);
+                returnInput.value = formatDate(newReturn);
+                
+                // Update constraints
+                returnInput.min = formatDate(newDeparture);
             }
+        });
+
+        // Return date change handler
+        returnInput.addEventListener('change', function() {
+            const tripType = document.getElementById('trip_type').value;
+            
+            if (this.value && departureInput.value && tripType === 'round') {
+                const departure = new Date(departureInput.value);
+                const returnDate = new Date(this.value);
+                
+                // Update the gap based on current selection
+                const timeDiff = returnDate.getTime() - departure.getTime();
+                dateGap = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                
+                // If return is before departure, fix it
+                if (dateGap < 0) {
+                    dateGap = 7; // Reset to default
+                    const fixedReturn = new Date(departure);
+                    fixedReturn.setDate(departure.getDate() + dateGap);
+                    returnInput.value = formatDate(fixedReturn);
+                }
+            }
+        });
+
+        tripButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                updateTripType(this.dataset.trip);
+            });
+        });
+
+        // Initialize with round trip and dates
+        initializeDates();
+        updateTripType('round');
+
+        // Airport/City Search Functionality
+        function initLocationSearch() {
+            const fromInput = document.getElementById('from');
+            const toInput = document.getElementById('to');
+            const fromDropdown = document.getElementById('from-dropdown');
+            const toDropdown = document.getElementById('to-dropdown');
 
             function initSearchInput(input, dropdown, placeholder, showAnywhere = false) {
                 let isOpen = false;
@@ -931,14 +973,12 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     }
                 });
 
-                // Update placeholder when focused
-                input.addEventListener('focus', function() {
-                    input.setAttribute('placeholder', `${placeholder}...`);
-                });
-
-                input.addEventListener('blur', function() {
-                    input.setAttribute('placeholder', 'City or Airport');
-                });
+                function updateActiveItem(items, index) {
+                    items.forEach(item => item.classList.remove('bg-gray-700', 'text-white'));
+                    if (index > -1 && items[index]) {
+                        items[index].classList.add('bg-gray-700', 'text-white');
+                    }
+                }
             }
 
             function searchLocations(query, dropdown, showAnywhere = false) {
@@ -1006,73 +1046,71 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                     });
             }
 
-            function updateActiveItem(items, index) {
-                items.forEach(item => item.classList.remove('bg-gray-700', 'text-white'));
-                if (index > -1 && items[index]) {
-                    items[index].classList.add('bg-gray-700', 'text-white');
-                }
-            }
+            // Initialize search for both inputs
+            initSearchInput(fromInput, fromDropdown, 'Leaving from');
+            initSearchInput(toInput, toDropdown, 'Going to', true);
+        }
 
-            // Load trending destinations
-            function loadTrendingDestinations() {
-                fetch('get_destinations.php?trending=true')
-                    .then(response => response.json())
-                    .then(destinations => {
-                        const container = document.getElementById('trending-destinations');
-                        if (!container) return;
+        // Load trending destinations
+        function loadTrendingDestinations() {
+            fetch('get_destinations.php?trending=true')
+                .then(response => response.json())
+                .then(destinations => {
+                    const container = document.getElementById('trending-destinations');
+                    if (!container) return;
 
-                        container.innerHTML = destinations.map(dest => `
-                            <div class="dark-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 cursor-pointer">
-                                <div class="relative h-48 overflow-hidden">
-                                    <img src="${dest.image_url}" alt="${dest.location_name}" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
-                                    <div class="absolute bottom-4 left-4 text-white">
-                                        <h3 class="text-xl font-bold">${dest.location_name}</h3>
-                                        <p class="text-blue-100">HKD${dest.price} per traveler</p>
-                                    </div>
-                                </div>
-                                <div class="p-4">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-blue-300 font-medium">${dest.country_name}</span>
-                                        <button class="text-blue-400 hover:text-yellow-400 transition-colors">
-                                            <i data-feather="heart"></i>
-                                        </button>
-                                    </div>
-                                    <p class="text-gray-300 text-sm mt-2 line-clamp-2">${dest.description}</p>
+                    container.innerHTML = destinations.map(dest => `
+                        <div class="dark-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 cursor-pointer">
+                            <div class="relative h-48 overflow-hidden">
+                                <img src="${dest.image_url}" alt="${dest.location_name}" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
+                                <div class="absolute bottom-4 left-4 text-white">
+                                    <h3 class="text-xl font-bold">${dest.location_name}</h3>
+                                    <p class="text-blue-100">HKD${dest.price} per traveler</p>
                                 </div>
                             </div>
-                        `).join('');
+                            <div class="p-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-blue-300 font-medium">${dest.country_name}</span>
+                                    <button class="text-blue-400 hover:text-yellow-400 transition-colors">
+                                        <i data-feather="heart"></i>
+                                    </button>
+                                </div>
+                                <p class="text-gray-300 text-sm mt-2 line-clamp-2">${dest.description}</p>
+                            </div>
+                        </div>
+                    `).join('');
 
-                        // Re-initialize feather icons for new content
-                        feather.replace();
-                    })
-                    .catch(error => console.error('Error loading destinations:', error));
+                    // Re-initialize feather icons for new content
+                    feather.replace();
+                })
+                .catch(error => console.error('Error loading destinations:', error));
+        }
+
+        // Form validation
+        document.getElementById('search-form').addEventListener('submit', function(e) {
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const departure = document.getElementById('departure').value;
+
+            if (!from || !to || !departure) {
+                e.preventDefault();
+                alert('Please fill in all required fields: From, To, and Departure Date');
+                return;
             }
 
-            // Form validation
-            document.getElementById('search-form').addEventListener('submit', function(e) {
-                const from = document.getElementById('from').value;
-                const to = document.getElementById('to').value;
-                const departure = document.getElementById('departure').value;
-
-                if (!from || !to || !departure) {
-                    e.preventDefault();
-                    alert('Please fill in all required fields: From, To, and Departure Date');
-                    return;
-                }
-
-                if (from === to) {
-                    e.preventDefault();
-                    alert('Origin and destination cannot be the same');
-                    return;
-                }
-            });
-
-            // Initialize when DOM is loaded
-            initLocationSearch();
-            loadTrendingDestinations();
+            if (from === to) {
+                e.preventDefault();
+                alert('Origin and destination cannot be the same');
+                return;
+            }
         });
-    </script>
+
+        // Initialize features
+        initLocationSearch();
+        loadTrendingDestinations();
+    });
+</script>
 </body>
 
 </html>

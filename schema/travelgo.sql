@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 11, 2025 at 03:20 PM
+-- Generation Time: Nov 16, 2025 at 01:29 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -57,7 +57,8 @@ INSERT INTO `bookings` (`id`, `user_id`, `booking_reference`, `flight_type`, `fl
 (3, NULL, 'TGF01BF4660A', 'round_trip', 4, '{\"flight_id\":\"4\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":4,\"flight_number\":\"CX451\",\"airline_code\":\"CX\",\"airline_name\":\"Cathay Pacific\",\"origin\":\"Hong Kong\",\"destination\":\"Bangkok\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"09:30:00\",\"arrival_time\":\"11:45:00\",\"return_departure_time\":\"13:00:00\",\"return_arrival_time\":\"17:15:00\",\"duration\":\"2h 15m\",\"return_duration\":\"4h 15m\",\"stops\":0,\"return_stops\":1,\"price\":\"2800.00\",\"class\":\"economy\",\"seats_available\":50,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"1\",\"selected_seats\":\"[\\\"1E\\\"]\",\"seat_charges\":\"50\",\"base_amount\":2800,\"tax_amount\":84,\"applied_coupon\":{\"id\":1,\"code\":\"WELCOME15\",\"description\":\"15% OFF for your first flight booking!\",\"discount_type\":\"percentage\",\"discount_value\":\"15.00\",\"min_amount\":\"100.00\",\"max_discount\":\"500.00\",\"valid_from\":\"2025-11-11 00:05:37\",\"valid_until\":\"2026-12-31 23:59:59\",\"usage_limit\":1,\"used_count\":0,\"for_new_users\":1,\"is_active\":1,\"created_at\":\"2025-11-11 00:05:37\"},\"discount_amount\":420,\"duration\":\"2h 15m\",\"return_duration\":\"4h 15m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan  To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-11-01\"}}', '{\"street\":\"1234567890\",\"city\":\"Causeway Bay\",\"state\":\"Sham Shui Po\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 2514.00, 'confirmed', '2025-11-10 17:26:20', '2025-11-10 17:26:20', NULL, 0.00),
 (4, NULL, 'TG2C6B6B5725', 'round_trip', 2, '{\"flight_id\":\"2\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":2,\"flight_number\":\"JL736\",\"airline_code\":\"JL\",\"airline_name\":\"Japan Airlines\",\"origin\":\"Hong Kong\",\"destination\":\"Tokyo\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"14:30:00\",\"arrival_time\":\"19:00:00\",\"return_departure_time\":\"09:00:00\",\"return_arrival_time\":\"13:30:00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\",\"stops\":0,\"return_stops\":0,\"price\":\"3500.00\",\"class\":\"economy\",\"seats_available\":30,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"1\",\"selected_seats\":\"[\\\"3F\\\"]\",\"seat_charges\":\"0\",\"base_amount\":3500,\"tax_amount\":105,\"applied_coupon\":{\"id\":1,\"code\":\"WELCOME15\",\"description\":\"15% OFF for your first flight booking!\",\"discount_type\":\"percentage\",\"discount_value\":\"15.00\",\"min_amount\":\"100.00\",\"max_discount\":\"500.00\",\"valid_from\":\"2025-11-11 00:05:37\",\"valid_until\":\"2026-12-31 23:59:59\",\"usage_limit\":1,\"used_count\":0,\"for_new_users\":1,\"is_active\":1,\"created_at\":\"2025-11-11 00:05:37\"},\"discount_amount\":\"500.00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"To\",\"last_name\":\"To\",\"email\":\"polo2nd2024@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-11-01\"}}', '{\"street\":\"1234567890\",\"city\":\"Hong Kong\",\"state\":\"Wong Tai Sin\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 3105.00, 'confirmed', '2025-11-11 11:39:59', '2025-11-11 11:39:59', NULL, 0.00),
 (5, 1, 'TGC040C1B4AD', 'round_trip', 2, '{\"flight_id\":\"2\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":2,\"flight_number\":\"JL736\",\"airline_code\":\"JL\",\"airline_name\":\"Japan Airlines\",\"origin\":\"Hong Kong\",\"destination\":\"Tokyo\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"14:30:00\",\"arrival_time\":\"19:00:00\",\"return_departure_time\":\"09:00:00\",\"return_arrival_time\":\"13:30:00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\",\"stops\":0,\"return_stops\":0,\"price\":\"3500.00\",\"class\":\"economy\",\"seats_available\":29,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"1\",\"selected_seats\":\"[\\\"3E\\\"]\",\"seat_charges\":\"0\",\"base_amount\":3500,\"tax_amount\":105,\"applied_coupon\":{\"id\":1,\"code\":\"WELCOME15\",\"description\":\"15% OFF for your first flight booking!\",\"discount_type\":\"percentage\",\"discount_value\":\"15.00\",\"min_amount\":\"100.00\",\"max_discount\":\"500.00\",\"valid_from\":\"2025-11-11 00:05:37\",\"valid_until\":\"2026-12-31 23:59:59\",\"usage_limit\":1,\"used_count\":0,\"for_new_users\":1,\"is_active\":1,\"created_at\":\"2025-11-11 00:05:37\"},\"discount_amount\":\"500.00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-10-01\"}}', '{\"street\":\"123456789990\",\"city\":\"Central\",\"state\":\"Sham Shui Po\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'credit_card', 3105.00, 'confirmed', '2025-11-11 12:16:44', '2025-11-11 12:16:44', NULL, 0.00),
-(6, 1, 'TG4C3D7F01BC', 'round_trip', 3, '{\"flight_id\":\"3\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":3,\"flight_number\":\"NH812\",\"airline_code\":\"NH\",\"airline_name\":\"All Nippon Airways\",\"origin\":\"Hong Kong\",\"destination\":\"Tokyo\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"20:15:00\",\"arrival_time\":\"00:45:00\",\"return_departure_time\":\"16:30:00\",\"return_arrival_time\":\"21:00:00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\",\"stops\":0,\"return_stops\":0,\"price\":\"3800.00\",\"class\":\"economy\",\"seats_available\":28,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"2\",\"selected_seats\":\"[\\\"8D\\\",\\\"2D\\\"]\",\"seat_charges\":\"50\",\"base_amount\":7600,\"tax_amount\":228,\"applied_coupon\":null,\"discount_amount\":0,\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-10-09\"},\"passenger_2\":{\"first_name\":\"Tin Yan\",\"last_name\":\"To\",\"gender\":\"male\"}}', '{\"street\":\"123456789990\",\"city\":\"Central\",\"state\":\"Sham Shui Po\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 7878.00, 'confirmed', '2025-11-11 12:26:17', '2025-11-11 12:26:17', NULL, 0.00);
+(6, 1, 'TG4C3D7F01BC', 'round_trip', 3, '{\"flight_id\":\"3\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":3,\"flight_number\":\"NH812\",\"airline_code\":\"NH\",\"airline_name\":\"All Nippon Airways\",\"origin\":\"Hong Kong\",\"destination\":\"Tokyo\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"20:15:00\",\"arrival_time\":\"00:45:00\",\"return_departure_time\":\"16:30:00\",\"return_arrival_time\":\"21:00:00\",\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\",\"stops\":0,\"return_stops\":0,\"price\":\"3800.00\",\"class\":\"economy\",\"seats_available\":28,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"2\",\"selected_seats\":\"[\\\"8D\\\",\\\"2D\\\"]\",\"seat_charges\":\"50\",\"base_amount\":7600,\"tax_amount\":228,\"applied_coupon\":null,\"discount_amount\":0,\"duration\":\"4h 30m\",\"return_duration\":\"4h 30m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-10-09\"},\"passenger_2\":{\"first_name\":\"Tin Yan\",\"last_name\":\"To\",\"gender\":\"male\"}}', '{\"street\":\"123456789990\",\"city\":\"Central\",\"state\":\"Sham Shui Po\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 7878.00, 'confirmed', '2025-11-11 12:26:17', '2025-11-11 12:26:17', NULL, 0.00),
+(7, 1, 'TGBE1DC7349B', 'round_trip', 5, '{\"flight_id\":\"5\",\"flight_type\":\"round_trip\",\"flight_data\":{\"id\":5,\"flight_number\":\"TG639\",\"airline_code\":\"TG\",\"airline_name\":\"Thai Airways\",\"origin\":\"Hong Kong\",\"destination\":\"Bangkok\",\"departure_date\":\"2025-10-15\",\"return_date\":\"2025-10-22\",\"departure_time\":\"16:45:00\",\"arrival_time\":\"19:00:00\",\"return_departure_time\":\"08:30:00\",\"return_arrival_time\":\"12:45:00\",\"duration\":\"2h 15m\",\"return_duration\":\"4h 15m\",\"stops\":0,\"return_stops\":1,\"price\":\"2600.00\",\"class\":\"economy\",\"seats_available\":38,\"created_at\":\"2025-10-09 13:30:10\"},\"passengers\":\"1\",\"selected_seats\":\"[\\\"1E\\\"]\",\"seat_charges\":\"50\",\"base_amount\":2600,\"tax_amount\":78,\"applied_coupon\":null,\"discount_amount\":0,\"duration\":\"2h 15m\",\"return_duration\":\"4h 15m\"}', NULL, 0.00, '{\"passenger_1\":{\"first_name\":\"Tin\",\"last_name\":\"Yan To\",\"email\":\"polo1st2023@gmail.com\",\"phone\":\"+852 55441153\",\"gender\":\"male\",\"dob\":\"2007-10-09\"}}', '{\"street\":\"123456789990\",\"city\":\"Central\",\"state\":\"Sham Shui Po\",\"zip\":\"999077\",\"country\":\"Hong Kong SAR\"}', 'paypal', 2728.00, 'confirmed', '2025-11-16 12:28:36', '2025-11-16 12:28:36', NULL, 0.00);
 
 -- --------------------------------------------------------
 
@@ -303,6 +304,41 @@ INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `is_re
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `one_way_flights`
+--
+
+CREATE TABLE `one_way_flights` (
+  `id` int(11) NOT NULL,
+  `flight_number` varchar(20) NOT NULL,
+  `airline_code` varchar(10) NOT NULL,
+  `airline_name` varchar(100) NOT NULL,
+  `origin` varchar(100) NOT NULL,
+  `destination` varchar(100) NOT NULL,
+  `departure_date` date NOT NULL,
+  `departure_time` time NOT NULL,
+  `arrival_time` time NOT NULL,
+  `duration` varchar(20) NOT NULL,
+  `stops` int(11) DEFAULT 0,
+  `price` decimal(10,2) NOT NULL,
+  `class` varchar(50) DEFAULT 'economy',
+  `seats_available` int(11) DEFAULT 100,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `one_way_flights`
+--
+
+INSERT INTO `one_way_flights` (`id`, `flight_number`, `airline_code`, `airline_name`, `origin`, `destination`, `departure_date`, `departure_time`, `arrival_time`, `duration`, `stops`, `price`, `class`, `seats_available`, `created_at`) VALUES
+(1, 'CX123', 'CX', 'Cathay Pacific', 'Hong Kong', 'Tokyo', '2025-10-15', '08:00:00', '12:30:00', '4h 30m', 0, 1600.00, 'economy', 50, '2025-11-16 10:00:50'),
+(2, 'JL456', 'JL', 'Japan Airlines', 'Hong Kong', 'Tokyo', '2025-10-15', '14:30:00', '19:00:00', '4h 30m', 0, 1750.00, 'economy', 45, '2025-11-16 10:00:50'),
+(3, 'NH789', 'NH', 'All Nippon Airways', 'Hong Kong', 'Tokyo', '2025-10-15', '20:15:00', '00:45:00', '4h 30m', 0, 1900.00, 'economy', 40, '2025-11-16 10:00:50'),
+(4, 'CX321', 'CX', 'Cathay Pacific', 'Hong Kong', 'Bangkok', '2025-10-15', '09:30:00', '11:45:00', '2h 15m', 0, 1400.00, 'economy', 60, '2025-11-16 10:00:50'),
+(5, 'TG654', 'TG', 'Thai Airways', 'Hong Kong', 'Bangkok', '2025-10-15', '16:45:00', '19:00:00', '2h 15m', 0, 1300.00, 'economy', 55, '2025-11-16 10:00:50');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `round_trip_flights`
 --
 
@@ -338,7 +374,7 @@ INSERT INTO `round_trip_flights` (`id`, `flight_number`, `airline_code`, `airlin
 (2, 'JL736', 'JL', 'Japan Airlines', 'Hong Kong', 'Tokyo', '2025-10-15', '2025-10-22', '14:30:00', '19:00:00', '09:00:00', '13:30:00', '4h 30m', '4h 30m', 0, 0, 3500.00, 'economy', 28, '2025-10-09 05:30:10'),
 (3, 'NH812', 'NH', 'All Nippon Airways', 'Hong Kong', 'Tokyo', '2025-10-15', '2025-10-22', '20:15:00', '00:45:00', '16:30:00', '21:00:00', '4h 30m', '4h 30m', 0, 0, 3800.00, 'economy', 26, '2025-10-09 05:30:10'),
 (4, 'CX451', 'CX', 'Cathay Pacific', 'Hong Kong', 'Bangkok', '2025-10-15', '2025-10-22', '09:30:00', '11:45:00', '13:00:00', '17:15:00', '2h 15m', '4h 15m', 0, 1, 2800.00, 'economy', 49, '2025-10-09 05:30:10'),
-(5, 'TG639', 'TG', 'Thai Airways', 'Hong Kong', 'Bangkok', '2025-10-15', '2025-10-22', '16:45:00', '19:00:00', '08:30:00', '12:45:00', '2h 15m', '4h 15m', 0, 1, 2600.00, 'economy', 38, '2025-10-09 05:30:10');
+(5, 'TG639', 'TG', 'Thai Airways', 'Hong Kong', 'Bangkok', '2025-10-15', '2025-10-22', '16:45:00', '19:00:00', '08:30:00', '12:45:00', '2h 15m', '4h 15m', 0, 1, 2600.00, 'economy', 37, '2025-10-09 05:30:10');
 
 -- --------------------------------------------------------
 
@@ -412,7 +448,8 @@ INSERT INTO `transactions` (`id`, `booking_id`, `transaction_id`, `amount`, `cur
 (3, 3, 'TXN4711B812983C50CF', 2514.00, 'HKD', 'paypal', 'success', '2025-11-10 17:26:20', '2025-11-10 17:26:20'),
 (4, 4, 'TXN075E9E7B9FE2A49B', 3105.00, 'HKD', 'paypal', 'success', '2025-11-11 11:39:59', '2025-11-11 11:39:59'),
 (5, 5, 'TXND092894782E05207', 3105.00, 'HKD', 'credit_card', 'success', '2025-11-11 12:16:44', '2025-11-11 12:16:44'),
-(6, 6, 'TXNCA3EC508F948A390', 7878.00, 'HKD', 'paypal', 'success', '2025-11-11 12:26:17', '2025-11-11 12:26:17');
+(6, 6, 'TXNCA3EC508F948A390', 7878.00, 'HKD', 'paypal', 'success', '2025-11-11 12:26:17', '2025-11-11 12:26:17'),
+(7, 7, 'TXNF21F98418E463C28', 2728.00, 'HKD', 'paypal', 'success', '2025-11-16 12:28:36', '2025-11-16 12:28:36');
 
 -- --------------------------------------------------------
 
@@ -622,6 +659,12 @@ ALTER TABLE `notifications`
   ADD KEY `idx_notifications_created` (`created_at`);
 
 --
+-- Indexes for table `one_way_flights`
+--
+ALTER TABLE `one_way_flights`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `round_trip_flights`
 --
 ALTER TABLE `round_trip_flights`
@@ -700,7 +743,7 @@ ALTER TABLE `user_wishlist`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `cities`
@@ -745,6 +788,12 @@ ALTER TABLE `notifications`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
+-- AUTO_INCREMENT for table `one_way_flights`
+--
+ALTER TABLE `one_way_flights`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
 -- AUTO_INCREMENT for table `round_trip_flights`
 --
 ALTER TABLE `round_trip_flights`
@@ -760,7 +809,7 @@ ALTER TABLE `states`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `users`

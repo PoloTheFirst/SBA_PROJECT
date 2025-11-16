@@ -75,7 +75,6 @@ try {
     $offersStmt->execute([$_SESSION['user_id']]);
     $userOffers = $offersStmt->fetchAll();
 
-
     // Count available offers
     $availableOffersCount = count($userOffers);
 
@@ -407,7 +406,7 @@ $wishlistStmt = $pdo->prepare("SELECT * FROM user_wishlist WHERE user_id = ? ORD
 $wishlistStmt->execute([$_SESSION['user_id']]);
 $wishlist = $wishlistStmt->fetchAll();
 
-// Get user bookings with enhanced data
+// Get user bookings with enhanced data - FIXED: Better seat handling
 $bookingsStmt = $pdo->prepare("
     SELECT b.*, 
            t.transaction_id,
@@ -416,7 +415,10 @@ $bookingsStmt = $pdo->prepare("
            JSON_EXTRACT(b.flight_details, '$.flight_data.flight_number') as flight_number,
            JSON_EXTRACT(b.flight_details, '$.flight_data.origin') as origin,
            JSON_EXTRACT(b.flight_details, '$.flight_data.destination') as destination,
-           JSON_EXTRACT(b.flight_details, '$.selected_seats') as selected_seats,
+           JSON_EXTRACT(b.flight_details, '$.selected_seats') as selected_seats_json,
+           b.selected_seats as selected_seats_column,
+           JSON_EXTRACT(b.flight_details, '$.flight_data.departure_date') as departure_date,
+           JSON_EXTRACT(b.flight_details, '$.flight_data.return_date') as return_date,
            b.created_at as booking_date
     FROM bookings b 
     LEFT JOIN transactions t ON b.id = t.booking_id 
@@ -427,27 +429,73 @@ $bookingsStmt = $pdo->prepare("
 $bookingsStmt->execute([$_SESSION['user_id']]);
 $bookings = $bookingsStmt->fetchAll();
 
-// Process JSON fields for display
+// Process JSON fields for display - FIXED: Clean seat display without brackets and quotes
 foreach ($bookings as &$booking) {
     // Extract JSON values
     $booking['airline_name'] = trim($booking['airline_name'] ?? '', '"');
     $booking['flight_number'] = trim($booking['flight_number'] ?? '', '"');
     $booking['origin'] = trim($booking['origin'] ?? '', '"');
     $booking['destination'] = trim($booking['destination'] ?? '', '"');
+    $booking['departure_date'] = trim($booking['departure_date'] ?? '', '"');
+    $booking['return_date'] = trim($booking['return_date'] ?? '', '"');
 
-    // Handle selected seats
-    if ($booking['selected_seats']) {
-        $seats = json_decode($booking['selected_seats'], true);
-        if (is_array($seats)) {
-            $booking['selected_seats_display'] = implode(', ', $seats);
-        } else {
-            $booking['selected_seats_display'] = 'Not assigned';
+    // Handle selected seats - FIXED: Clean display without brackets and quotes
+    $selectedSeats = 'Not assigned';
+    
+    // Method 1: Check if seats are stored in the flight_details JSON
+    if (!empty($booking['selected_seats_json']) && $booking['selected_seats_json'] !== 'null') {
+        $seatsFromJson = json_decode($booking['selected_seats_json'], true);
+        if (is_array($seatsFromJson) && !empty($seatsFromJson)) {
+            $selectedSeats = implode(', ', $seatsFromJson);
+        } elseif (is_string($seatsFromJson) && !empty($seatsFromJson)) {
+            $selectedSeats = $seatsFromJson;
         }
-    } else {
-        $booking['selected_seats_display'] = 'Not assigned';
+    }
+    
+    // Method 2: Check if seats are stored in the dedicated selected_seats column
+    if ($selectedSeats === 'Not assigned' && !empty($booking['selected_seats_column']) && $booking['selected_seats_column'] !== 'null') {
+        $seatsFromColumn = json_decode($booking['selected_seats_column'], true);
+        if (is_array($seatsFromColumn) && !empty($seatsFromColumn)) {
+            $selectedSeats = implode(', ', $seatsFromColumn);
+        } elseif (is_string($seatsFromColumn) && !empty($seatsFromColumn)) {
+            $selectedSeats = $seatsFromColumn;
+        }
+    }
+    
+    // Method 3: Try to extract from the main flight_details JSON
+    if ($selectedSeats === 'Not assigned') {
+        $flightDetails = json_decode($booking['flight_details'], true);
+        if (is_array($flightDetails) && isset($flightDetails['selected_seats'])) {
+            $seatsFromFlightDetails = $flightDetails['selected_seats'];
+            if (is_array($seatsFromFlightDetails) && !empty($seatsFromFlightDetails)) {
+                $selectedSeats = implode(', ', $seatsFromFlightDetails);
+            } elseif (is_string($seatsFromFlightDetails) && !empty($seatsFromFlightDetails)) {
+                $selectedSeats = $seatsFromFlightDetails;
+            }
+        }
     }
 
-    // Format dates
+    // Clean up any remaining brackets and quotes
+    $selectedSeats = str_replace(['[', ']', '"', "'"], '', $selectedSeats);
+    $selectedSeats = trim($selectedSeats);
+    
+    // If after cleaning it's empty, set to 'Not assigned'
+    if (empty($selectedSeats)) {
+        $selectedSeats = 'Not assigned';
+    }
+
+    $booking['selected_seats_display'] = $selectedSeats;
+
+    // Format travel dates if available
+    if ($booking['departure_date'] && $booking['return_date']) {
+        $booking['travel_dates'] = date('M j, Y', strtotime($booking['departure_date'])) . ' - ' . date('M j, Y', strtotime($booking['return_date']));
+    } elseif ($booking['departure_date']) {
+        $booking['travel_dates'] = date('M j, Y', strtotime($booking['departure_date']));
+    } else {
+        $booking['travel_dates'] = 'N/A';
+    }
+
+    // Format booking date
     $booking['formatted_date'] = date('M j, Y', strtotime($booking['booking_date']));
 }
 unset($booking); // Break the reference
@@ -461,6 +509,201 @@ $notificationsStmt = $pdo->prepare("
 ");
 $notificationsStmt->execute([$_SESSION['user_id']]);
 $notifications = $notificationsStmt->fetchAll();
+
+// Function to generate printable ticket
+function generatePrintableTicket($booking)
+{
+    // Decode flight details to get more information
+    $flightDetails = json_decode($booking['flight_details'], true);
+    $flightData = $flightDetails['flight_data'] ?? [];
+    $passengerInfo = json_decode($booking['passenger_info'], true);
+
+    ob_start();
+?>
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Flight Ticket - <?= htmlspecialchars($booking['booking_reference']) ?></title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            @media print {
+                body {
+                    margin: 0;
+                    padding: 20px;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+
+                .ticket-container {
+                    box-shadow: none !important;
+                    border: 2px solid #000 !important;
+                }
+            }
+
+            .ticket-container {
+                background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+                color: white;
+                border-radius: 12px;
+                padding: 30px;
+                max-width: 600px;
+                margin: 0 auto;
+                border: 2px solid #3b82f6;
+            }
+
+            .ticket-header {
+                border-bottom: 2px dashed #60a5fa;
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+            }
+
+            .flight-info {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                padding: 15px;
+                margin: 10px 0;
+            }
+
+            .barcode {
+                text-align: center;
+                margin: 20px 0;
+                padding: 10px;
+                background: white;
+                border-radius: 8px;
+            }
+        </style>
+    </head>
+
+    <body class="bg-gray-100">
+        <div class="ticket-container">
+            <!-- Header -->
+            <div class="ticket-header text-center">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="text-left">
+                        <h1 class="text-2xl font-bold">TRAVELGO ORBIT</h1>
+                        <p class="text-blue-200">Flight Ticket</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-blue-200">Booking Reference</div>
+                        <div class="text-xl font-bold font-mono"><?= htmlspecialchars($booking['booking_reference']) ?></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div class="text-left">
+                        <div class="text-lg font-semibold"><?= htmlspecialchars($booking['origin']) ?></div>
+                        <div class="text-blue-200 text-sm">Departure</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-900">
+                                <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-semibold"><?= htmlspecialchars($booking['destination']) ?></div>
+                        <div class="text-blue-200 text-sm">Arrival</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flight Information -->
+            <div class="flight-info">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <div class="text-blue-200 text-sm">Airline</div>
+                        <div class="font-semibold"><?= htmlspecialchars($booking['airline_name']) ?></div>
+                    </div>
+                    <div>
+                        <div class="text-blue-200 text-sm">Flight Number</div>
+                        <div class="font-semibold"><?= htmlspecialchars($booking['flight_number']) ?></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-blue-200 text-sm">Class</div>
+                        <div class="font-semibold">Economy</div>
+                    </div>
+                    <div>
+                        <div class="text-blue-200 text-sm">Seat</div>
+                        <div class="font-semibold"><?= htmlspecialchars($booking['selected_seats_display']) ?></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Passenger Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 border-b border-blue-400 pb-2">Passenger Information</h3>
+                <?php if (is_array($passengerInfo) && !empty($passengerInfo)): ?>
+                    <?php foreach ($passengerInfo as $index => $passenger): ?>
+                        <div class="bg-blue-900 rounded-lg p-3 mb-2">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="font-semibold"><?= htmlspecialchars($passenger['first_name'] ?? '') ?> <?= htmlspecialchars($passenger['last_name'] ?? '') ?></div>
+                                    <div class="text-blue-200 text-sm">
+                                        <?= ucfirst($passenger['gender'] ?? '') ?>
+                                        <?php if (isset($passenger['dob'])): ?>
+                                            • <?= date('M j, Y', strtotime($passenger['dob'])) ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm text-blue-200">Passenger</div>
+                                    <div class="font-semibold"><?= $index === 'passenger_1' ? '1' : substr($index, -1) ?></div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <!-- Additional Details -->
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <div class="text-blue-200">Booking Date</div>
+                    <div class="font-semibold"><?= date('M j, Y g:i A', strtotime($booking['created_at'])) ?></div>
+                </div>
+                <div>
+                    <div class="text-blue-200">Status</div>
+                    <div class="font-semibold text-green-400"><?= ucfirst($booking['status']) ?></div>
+                </div>
+            </div>
+
+            <!-- Barcode Area -->
+            <div class="barcode no-print">
+                <div class="text-gray-800 font-mono text-lg font-bold mb-2"><?= htmlspecialchars($booking['booking_reference']) ?></div>
+                <div class="text-gray-600 text-sm">Scan at airport for check-in</div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-6 pt-4 border-t border-blue-400">
+                <p class="text-blue-200 text-sm">
+                    <strong>Important:</strong> Please bring this ticket and valid ID to the airport.<br>
+                    Check-in at least 2 hours before departure.
+                </p>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 no-print">
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                Print Ticket
+            </button>
+            <button onclick="window.close()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg ml-2">
+                Close
+            </button>
+        </div>
+    </body>
+
+    </html>
+<?php
+    return ob_get_clean();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1061,7 +1304,7 @@ $notifications = $notificationsStmt->fetchAll();
                     </div>
 
                 <?php elseif ($current_view === 'bookings'): ?>
-                    <!-- BOOKINGS VIEW -->
+                    <!-- BOOKINGS VIEW - UPDATED -->
                     <div class="w-full">
                         <div class="card-dark p-6 rounded-xl shadow-sm">
                             <h2 class="text-2xl font-bold text-white mb-6">My Bookings</h2>
@@ -1118,11 +1361,17 @@ $notifications = $notificationsStmt->fetchAll();
                                                         </div>
                                                     </div>
 
+                                                    <!-- Selected Seats Display -->
+                                                    <div class="mt-3">
+                                                        <p class="text-gray-400 text-sm">Selected Seats:</p>
+                                                        <p class="text-white font-medium"><?= htmlspecialchars($booking['selected_seats_display']) ?></p>
+                                                    </div>
+
                                                     <div class="mt-3 text-xs text-gray-500">
                                                         Booked on <?= date('M j, Y g:i A', strtotime($booking['created_at'])) ?>
                                                     </div>
 
-                                                    <!-- Expanded Details Section (Hidden by Default) -->
+                                                    <!-- Expanded Details Section -->
                                                     <div id="booking-details-<?= $booking['id'] ?>" class="hidden mt-6 pt-6 border-t border-gray-700">
                                                         <h4 class="text-lg font-semibold text-white mb-4">Booking Details</h4>
                                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1144,8 +1393,14 @@ $notifications = $notificationsStmt->fetchAll();
                                                                         </div>
                                                                         <div class="flex justify-between">
                                                                             <span class="text-gray-400">Selected Seats:</span>
-                                                                            <span class="text-white"><?= $booking['selected_seats_display'] ?></span>
+                                                                            <span class="text-white"><?= htmlspecialchars($booking['selected_seats_display']) ?></span>
                                                                         </div>
+                                                                        <?php if (isset($booking['travel_dates'])): ?>
+                                                                            <div class="flex justify-between">
+                                                                                <span class="text-gray-400">Travel Dates:</span>
+                                                                                <span class="text-white"><?= $booking['travel_dates'] ?></span>
+                                                                            </div>
+                                                                        <?php endif; ?>
                                                                     </div>
                                                                 </div>
 
@@ -1192,13 +1447,14 @@ $notifications = $notificationsStmt->fetchAll();
                                                                 <div>
                                                                     <h5 class="text-gray-300 font-medium mb-2">Actions</h5>
                                                                     <div class="flex space-x-2">
-                                                                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
-                                                                            <i data-feather="download" class="w-3 h-3 mr-1"></i>
-                                                                            Download Ticket
+                                                                        <button onclick="printTicket(<?= $booking['id'] ?>)"
+                                                                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors inline-flex items-center">
+                                                                            <i data-feather="printer" class="w-4 h-4 mr-2"></i>
+                                                                            Print Ticket
                                                                         </button>
                                                                         <?php if ($booking['status'] === 'pending'): ?>
-                                                                            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors">
-                                                                                <i data-feather="x" class="w-3 h-3 mr-1"></i>
+                                                                            <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                                                                                <i data-feather="x" class="w-4 h-4 mr-1"></i>
                                                                                 Cancel Booking
                                                                             </button>
                                                                         <?php endif; ?>
@@ -1206,17 +1462,22 @@ $notifications = $notificationsStmt->fetchAll();
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        <!-- Printable Ticket Section -->
+                                                        <div id="printable-ticket-<?= $booking['id'] ?>" class="hidden">
+                                                            <?= generatePrintableTicket($booking) ?>
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 <div class="flex space-x-2">
                                                     <button onclick="toggleBookingDetails(<?= $booking['id'] ?>)"
-                                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors inline-flex items-center">
+                                                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors inline-flex items-center">
                                                         <i data-feather="chevron-down" class="w-4 h-4 mr-1" id="booking-icon-<?= $booking['id'] ?>"></i>
                                                         View Details
                                                     </button>
                                                     <?php if ($booking['status'] === 'pending'): ?>
-                                                        <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                        <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors">
                                                             Cancel
                                                         </button>
                                                     <?php endif; ?>
@@ -1668,6 +1929,24 @@ $notifications = $notificationsStmt->fetchAll();
                 icon.setAttribute('data-feather', 'chevron-down');
             }
             feather.replace();
+        }
+
+        // Print ticket functionality
+        function printTicket(bookingId) {
+            // Get the printable ticket content
+            const ticketContent = document.getElementById('printable-ticket-' + bookingId);
+
+            if (ticketContent) {
+                // Open a new window with the ticket content
+                const printWindow = window.open('', '_blank', 'width=800,height=1000');
+                printWindow.document.write(ticketContent.innerHTML);
+                printWindow.document.close();
+
+                // Wait for content to load then print
+                printWindow.onload = function() {
+                    printWindow.print();
+                };
+            }
         }
 
         // Avatar upload functionality
