@@ -102,7 +102,7 @@ unset($_SESSION['booking_reference']);
     <!-- Footer -->
     <footer class="bg-gray-800 text-white py-6 mt-auto">
         <div class="container mx-auto px-4 text-center">
-            <p class="text-gray-400">&copy; 2023 TravelGO Orbit. All rights reserved.</p>
+            <p class="text-gray-400">&copy; 2025 TravelGO Orbit. All rights reserved.</p>
         </div>
     </footer>
 

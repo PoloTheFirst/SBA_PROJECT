@@ -702,6 +702,7 @@ if (isset($_SESSION['user_id']) && (!isset($_SESSION['username']) || !isset($_SE
                             <li><a href="./content_page/report.php" class="text-gray-400 hover:text-white">Report Issue</a></li>
                             <li><a href="./content_page/terms.php" class="text-gray-400 hover:text-white">Terms of Service</a></li>
                             <li><a href="./content_page/privacy.php" class="text-gray-400 hover:text-white">Privacy Policy</a></li>
+                            <li><a href="./content_page/sitemap.php" class="text-gray-400 hover:text-white">Sitemap</a></li>
                         </ul>
                     </div>
 
