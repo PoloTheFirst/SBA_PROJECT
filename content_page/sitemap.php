@@ -37,13 +37,13 @@ if (session_status() == PHP_SESSION_NONE) {
     <nav class="bg-gray-800 text-white py-4">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center space-x-2">
-                <a href="index.php" class="flex items-center space-x-2">
+                <a href="../index.php" class="flex items-center space-x-2">
                     <i data-feather="navigation" class="text-yellow-400"></i>
                     <span class="text-xl font-bold">TravelGO Orbit</span>
                 </a>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="index.php" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                <a href="../index.php" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
                     Back to Home
                 </a>
             </div>
@@ -57,7 +57,7 @@ if (session_status() == PHP_SESSION_NONE) {
                 <div>
                     <h2 class="text-2xl font-bold text-yellow-400 mb-4">Main Pages</h2>
                     <ul class="text-lg text-blue-100 space-y-2">
-                        <li><a href="../index.php">Home</a></li>
+                        <li><a href="../index.php">Homepage</a></li>
                         <li><a href="../dashboard.php">Dashboard</a></li>
                         <li><a href="../login.php">Login</a></li>
                         <li><a href="../register.php">Register</a></li>
